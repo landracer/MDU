@@ -1,0 +1,43 @@
+# Build outputs
+build_debug/
+build_release/
+build_android/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.o
+*.a
+*.so
+multidisplay-unified
+multidisplay-unified.exe
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Qt
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+debug.log
+
+# Android
+android/build/
+android/.gradle/
+
+# local build dirs
+build/
+build_test/
+data_extraction_logs/*.log
