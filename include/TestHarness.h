@@ -50,6 +50,11 @@ private slots:
     void testAngleConversions();
     void testUnitConverter();
 
+    // MD-ECU frame-decoder tests (fixture + robustness)
+    void testMdDecoderMainFrame();
+    void testMdDecoderDiscardResync();
+    void testMdDecoderFuzz();
+
 private:
     int m_testsRun = 0;
     int m_testsPassed = 0;

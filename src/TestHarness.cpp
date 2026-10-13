@@ -1,6 +1,8 @@
 /* Licensed under Sovereign Individual License v1.0 — see LICENSE file */
 #include "TestHarness.h"
 #include "UnitConverter.h"
+#include "MdFrameDecoder.h"
+#include <QRandomGenerator>
 #include <QDebug>
 #include <QTimer>
 #include <QThread>
@@ -42,6 +44,11 @@ bool TestHarness::runAllTests() {
     testClampLerp();
     testAngleConversions();
     testUnitConverter();
+
+    // MD-ECU frame-decoder tests
+    testMdDecoderMainFrame();
+    testMdDecoderDiscardResync();
+    testMdDecoderFuzz();
     
     qDebug() << "========================================";
     qDebug() << "  Results: " << m_testsPassed << "/" << m_testsRun << " passed";
@@ -361,4 +368,143 @@ void TestHarness::report(const QString& test, bool passed, const QString& detail
         m_testsFailed++;
         qWarning() << "  ✗" << test << ":" << detail;
     }
+}
+
+// ──────────────────────────────────────────────
+// MD-ECU frame decoder tests (golden fixtures + robustness)
+// ──────────────────────────────────────────────
+
+// Golden main-frame payload (92 bytes) with known field values.
+// RPM 4782, boost 145.34, throttle 20.0%, λ 1.00, MAF 2.50, ECT 90.16,
+// EGT1 777, batt 12.60V, speed 95.28 km/h, gear 3, N75 128/7.50,
+// EFR 0xFFFF sentinel -> 0, knock 5000, full Digifant block.
+static QByteArray fixturePayload()
+{
+    return QByteArray::fromHex(
+        "78070000" "AE12" "C638" "33" "6400" "FA00" "3823" "0903"
+        "0000000000000000000000000000"
+        "EC04" "111122223333" "444455556666" "3825" "03" "80" "EE02"
+        "C8" "12" "FFFF" "8813" "64" "96" "14" "50" "60" "0C" "22"
+        "64" "38" "32" "05" "000000000000" "60" "01F4"
+        "0102030405060708090A" "1770" "2E16" "2A");
+}
+
+static QByteArray fixtureFrame(bool goodEtx = true)
+{
+    QByteArray frame;
+    frame.append(char(0x02));            // STX
+    frame.append(char(95));               // TAG = total frame length (0x5F)
+    frame.append(fixturePayload());
+    frame.append(goodEtx ? char(0x03) : char(0x04));  // ETX (or corrupted)
+    return frame;
+}
+
+void TestHarness::testMdDecoderMainFrame()
+{
+    MdFrameDecoder dec;
+    QHash<DataPointID, double> out;
+    bool done = false;
+    const QByteArray frame = fixtureFrame();
+    for (char c : frame) {
+        if (dec.feedByte(static_cast<quint8>(c), out)) { done = true; break; }
+    }
+
+    report("testMdDecoder_mainFrame",
+           done && out.value(DataPointID::RPM) == 4782.0
+               && qFuzzyCompare(out.value(DataPointID::BoostPressure), 145.34)
+               && qFuzzyCompare(out.value(DataPointID::ThrottlePosition), 20.0)
+               && qFuzzyCompare(out.value(DataPointID::Lambda), 1.0)
+               && qFuzzyCompare(out.value(DataPointID::MAF), 2.5)
+               && qFuzzyCompare(out.value(DataPointID::CoolantTemp), 90.16),
+           "core fields exact");
+
+    report("testMdDecoder_egtBatterySpeed",
+           out.value(DataPointID::EGT1) == 777.0
+               && out.value(DataPointID::EGT2) == 0.0
+               && qFuzzyCompare(out.value(DataPointID::BatteryVoltage), 12.6)
+               && out.value(DataPointID::VdoPressure1) == 4369.0
+               && out.value(DataPointID::VdoTemp1) == 17476.0
+               && qFuzzyCompare(out.value(DataPointID::VehicleSpeed), 95.28)
+               && out.value(DataPointID::Gear) == 3.0,
+           "EGT/VDO/speed exact");
+
+    report("testMdDecoder_efrSentinel",
+           out.value(DataPointID::EFRSpeed) == 0.0
+               && out.value(DataPointID::Knock) == 5000.0
+               && out.value(DataPointID::N75DutyCycle) == 128.0
+               && out.value(DataPointID::N75Pwm) == 200.0
+               && qFuzzyCompare(out.value(DataPointID::N75Setpoint), 7.5)
+               && out.value(DataPointID::EcuFlags) == 18.0,
+           "EFR 0xFFFF sentinel -> 0, N75/knock exact");
+
+    report("testMdDecoder_digifant",
+           out.value(DataPointID::DFBoost) == 100.0
+               && out.value(DataPointID::DFLambda) == 150.0
+               && qFuzzyCompare(out.value(DataPointID::DFEct), 10.0)
+               && qFuzzyCompare(out.value(DataPointID::DFIat), 63.0)
+               && qFuzzyCompare(out.value(DataPointID::DFVoltage), 9.6)
+               && qAbs(out.value(DataPointID::DFIgnition) - 38.7437) < 1e-9
+               && qAbs(out.value(DataPointID::DFCyl1KnockRetard) - 17.57815) < 1e-9
+               && out.value(DataPointID::DFCyl1KnockDecay) == 5.0
+               && qFuzzyCompare(out.value(DataPointID::DFInjectPulse), 1000.0),
+           "Digifant maps/formulas exact");
+
+    report("testMdDecoder_digifantDerived",
+           qFuzzyCompare(out.value(DataPointID::DFComputedRpm), 5000.0)
+               && out.value(DataPointID::DFRpmDeltaHall) == 6000.0
+               && out.value(DataPointID::DFKlineFreq) == 5678.0
+               && out.value(DataPointID::DFActiveFrame) == 42.0,
+           "computed RPM 30e6/6000 = 5000");
+}
+
+void TestHarness::testMdDecoderDiscardResync()
+{
+    MdFrameDecoder dec;
+    QHash<DataPointID, double> out;
+
+    // 1) Corrupted frame (wrong byte at the length-based end position) is dropped
+    bool decoded = false;
+    for (char c : fixtureFrame(false)) {
+        if (dec.feedByte(static_cast<quint8>(c), out)) { decoded = true; break; }
+    }
+    report("testMdDecoder_discardCorrupt",
+           !decoded && dec.discardedCount() == 1,
+           "frame with bad ETX discarded, not decoded");
+
+    // 2) Decoder re-syncs on the next valid frame (garbage between frames ignored)
+    QByteArray stream;
+    stream.append("JUNK");
+    stream.append(fixtureFrame(true));
+    decoded = false;
+    out.clear();
+    for (char c : stream) {
+        if (dec.feedByte(static_cast<quint8>(c), out)) { decoded = true; break; }
+    }
+    report("testMdDecoder_resync",
+           decoded && out.value(DataPointID::RPM) == 4782.0 && dec.discardedCount() == 1,
+           "resyncs after corruption, values still exact");
+}
+
+void TestHarness::testMdDecoderFuzz()
+{
+    // Seeded random byte stream must never crash the decoder nor wedge it:
+    // after the fuzz burst the golden frame still decodes exactly.
+    QRandomGenerator rg(20261012u);
+    MdFrameDecoder dec;
+    QHash<DataPointID, double> junk;
+    for (int i = 0; i < 50000; i++) {
+        dec.feedByte(static_cast<quint8>(rg.bounded(256)), junk);
+    }
+    report("testMdDecoder_fuzzSurvival", true,
+           QString("50000 random bytes survived (discarded=%1)").arg(dec.discardedCount()));
+
+    bool decoded = false;
+    QHash<DataPointID, double> out;
+    for (char c : fixtureFrame(true)) {
+        if (dec.feedByte(static_cast<quint8>(c), out)) { decoded = true; break; }
+    }
+    report("testMdDecoder_fuzzThenExact",
+           decoded && out.value(DataPointID::RPM) == 4782.0
+               && qFuzzyCompare(out.value(DataPointID::BoostPressure), 145.34),
+           "decodes golden frame after fuzz");
 }

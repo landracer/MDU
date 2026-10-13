@@ -43,6 +43,14 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 # Single source of truth for the version string (used by main.cpp)
 target_compile_definitions(${PROJECT_NAME} PRIVATE APP_VERSION="${PROJECT_VERSION}")
 
+# ─── Unit tests (CTest aggregates the built-in TestHarness runner) ───
+enable_testing()
+add_test(NAME unit_tests COMMAND ${PROJECT_NAME} --unit-test)
+set_tests_properties(unit_tests PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+    PASS_REGULAR_EXPRESSION "ALL TESTS PASSED"
+)
+
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Core

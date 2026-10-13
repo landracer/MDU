@@ -59,21 +59,22 @@ Offsets are payload-relative (frame byte 2 = payload offset 0). AVR little-endia
 | 13–14 | caseTemp | uint16 LE /100 °C | `CoolantTemp` (0x0102) |
 | 15–16 … 29–30 | calEgt[0..7] | uint16 LE raw counts ×8 (successive 2-byte pairs) | `EGT1..EGT8` |
 | 31–32 | batVolt | uint16 LE /100 → V | `BatteryVoltage` (0x010D) |
-| 33–38 | vdoPres 1–3 | raw | not mapped |
-| 39–44 | vdoTemp 1–3 | raw | not mapped |
+| 33–38 | vdoPres 1–3 | raw | `VdoPressure1..3` (0x0137–0x0139) |
+| 39–44 | vdoTemp 1–3 | raw | `VdoTemp1..3` (0x013A–0x013C) |
 | 45–46 | speedF | uint16 LE /100 → km/h | `VehicleSpeed` (0x0101) |
 | 47 | gear | 0 = neutral, 1–6 | `Gear` (0x0130) |
 | 48 | n75 duty | raw 0–255 | `N75DutyCycle` (0x0134) |
 | 49–50 | n75 req boost | uint16 LE /100 | `N75Setpoint` (0x0135) |
-| 51 | n75 req boost PWM | raw | not mapped |
-| 52 | status flags | bitmask | not mapped |
+| 51 | n75 req boost PWM | raw | `N75Pwm` (0x013D) |
+| 52 | status flags | bitmask | `EcuFlags` (0x013E) |
 | 53–54 | EFR speed | `raw == 0xFFFF → 0`, else `40,000,000/raw` → RPM | `EFRSpeed` (0x0131) |
-| 55–56 | knock | raw | not mapped |
-| 57–91 | **Digifant block** (see below) | mixed | not mapped (roadmap) |
+| 55–56 | knock | raw | `Knock` (0x0136) |
+| 57–91 | **Digifant block** (see below) | mixed | `DF*` points (0x0140–0x0160) |
 
 ## Digifant block (payload 57–91, 68HC11-derived)
 
-Parsed in the ancestor app, intentionally unmapped in unified until its DPs are defined:
+Fully mapped in `MdFrameDecoder::decodeMainFrame()` (raw counts where the physical scale is
+unverified — bench calibration is a roadmap item):
 
 | Offset | Field | Decode |
 |---|---|---|

@@ -1,0 +1,32 @@
+# MultiDisplay Unified — build & test CI
+#
+# ubuntu job is authoritative (apt Qt6). A Windows matrix entry is intentionally
+# absent for now — the ecosystem-standard Windows toolchain pinning is tracked in
+# A-class.md (Pillar 6) and will be added once the MSVC/CIQt setup is agreed on.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt6 + Qwt
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qt6-base-dev-tools qt6-base-dev qt6-serialport-dev libqwt-qt6-dev cmake ninja-build
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j$(nproc)
+
+      - name: Unit tests
+        working-directory: build
+        run: ctest --output-on-failure

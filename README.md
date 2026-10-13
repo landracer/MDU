@@ -103,7 +103,7 @@ multidisplay-unified/
 ├── CHANGELOG.md  CONTRIBUTING.md
 ├── A-class.md                  # Professional-grade improvement game plan (living plan)
 ├── build.sh                    # Convenience build script
-├── include/  src/              # Headers / implementation (parser, store, UI, tests)
+├── include/  src/              # Headers / implementation (MdFrameDecoder + parsers, store, UI, tests)
 ├── resources/                  # app-icon.png + vendored plotting references under resources/plotting/
 ├── android/                    # Android packaging stubs (non-functional yet)
 ├── docs/                       # DEVELOPMENT.md + ESP-NOW protocol specs + archive/ (superseded session notes)
@@ -119,8 +119,8 @@ grade roadmap live in [`A-class.md`](A-class.md).
 - ✅ Thread-safe `UnifiedDataStore` (~30Hz, `QReadWriteLock`)
 - ✅ 4 hardware parsers (MD-ECU framing now matches the ancestor firmware contract)
 - ✅ Qwt real-time plots, clickable legends, markers, review mode
-- ✅ 13 unit-test groups / 34 assertions, all passing (`--unit-test`)
-- ⏳ Digifant-block payload fields (EGT/VDO/knock semantics) mapping — bench verification pending
+- ✅ 16 unit-test groups / 43 assertions, all passing (`--unit-test`, wired into CTest; CI on ubuntu)
+- ✅ MD-ECU Digifant/VDO/knock payload fully mapped (raw counts where uncalibrated)
 - 🔲 Session save/load/replay, export, Android, OTA — see A-class.md
 
 ## Contributing

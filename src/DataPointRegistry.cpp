@@ -99,6 +99,58 @@ void DataPointRegistry::initializeRegistry() {
         DataPointID::N75Setpoint, "N75 Boost Setpoint", "kPa", "ENGINE/ECU",
         0.1, 0.0, false
     };
+
+    // ─── MD-ECU local frame points (raw passthrough, scale 1.0) ───
+    // Parser emits fully-scaled values; registry metadata is display-only here.
+    struct RawPt { DataPointID id; const char* name; const char* unit; };
+    const RawPt rawPts[] = {
+        {DataPointID::Knock, "Knock Sensor (raw)", "counts"},
+        {DataPointID::VdoPressure1, "VDO Pressure 1 (raw)", "raw"},
+        {DataPointID::VdoPressure2, "VDO Pressure 2 (raw)", "raw"},
+        {DataPointID::VdoPressure3, "VDO Pressure 3 (raw)", "raw"},
+        {DataPointID::VdoTemp1, "VDO Temp 1 (raw)", "raw"},
+        {DataPointID::VdoTemp2, "VDO Temp 2 (raw)", "raw"},
+        {DataPointID::VdoTemp3, "VDO Temp 3 (raw)", "raw"},
+        {DataPointID::N75Pwm, "N75 Requested PWM (raw)", "raw"},
+        {DataPointID::EcuFlags, "ECU Status Flags", "bits"},
+        {DataPointID::DFBoost, "Digifant Boost Raw", "counts"},
+        {DataPointID::DFLambda, "Digifant Lambda Raw", "counts"},
+        {DataPointID::DFKnock, "Digifant Knock (raw)", "counts"},
+        {DataPointID::DFEct, "Digifant ECT", "°C"},
+        {DataPointID::DFIat, "Digifant IAT", "°C"},
+        {DataPointID::DFThrottlePoti, "Digifant Throttle Poti (raw)", "counts"},
+        {DataPointID::DFFlags, "Digifant Flags", "bits"},
+        {DataPointID::DFIgnition, "Digifant Ignition Advance", "°"},
+        {DataPointID::DFLcFlags, "Digifant LC Flags", "bits"},
+        {DataPointID::DFCyl1KnockRetard, "DF Cyl1 Knock Retard", "°"},
+        {DataPointID::DFCyl2KnockRetard, "DF Cyl2 Knock Retard", "°"},
+        {DataPointID::DFCyl3KnockRetard, "DF Cyl3 Knock Retard", "°"},
+        {DataPointID::DFCyl4KnockRetard, "DF Cyl4 Knock Retard", "°"},
+        {DataPointID::DFCyl1KnockDecay, "DF Cyl1 Knock Decay (raw)", "counts"},
+        {DataPointID::DFCyl2KnockDecay, "DF Cyl2 Knock Decay (raw)", "counts"},
+        {DataPointID::DFCyl3KnockDecay, "DF Cyl3 Knock Decay (raw)", "counts"},
+        {DataPointID::DFCyl4KnockDecay, "DF Cyl4 Knock Decay (raw)", "counts"},
+        {DataPointID::DFVoltage, "Digifant Voltage", "V"},
+        {DataPointID::DFInjectPulse, "Digifant Inject Pulse", "µs"},
+        {DataPointID::DFColdEnrich, "DF Cold Start Enrich (raw)", "raw"},
+        {DataPointID::DFWarmEnrich, "DF Warm Start Enrich (raw)", "raw"},
+        {DataPointID::DFEctEnrich, "DF ECT Enrich (raw)", "raw"},
+        {DataPointID::DFAccelEnrich, "DF Accel Enrich (raw)", "raw"},
+        {DataPointID::DFCounterEnrich, "DF Counter Enrich (raw)", "raw"},
+        {DataPointID::DFIatEnrich, "DF IAT Enrich (raw)", "raw"},
+        {DataPointID::DFIgnCounter, "DF Ign Counter (raw)", "raw"},
+        {DataPointID::DFIgnAddon, "DF Ign Addon (raw)", "raw"},
+        {DataPointID::DFEctAddon, "DF ECT Addon (raw)", "raw"},
+        {DataPointID::DFISV, "DF Idle Spark Value (raw)", "raw"},
+        {DataPointID::DFRpmDeltaHall, "DF RPM Delta Hall (raw)", "counts"},
+        {DataPointID::DFComputedRpm, "DF Computed RPM", "RPM"},
+        {DataPointID::DFKlineFreq, "DF K-Line Freq (raw)", "raw"},
+        {DataPointID::DFActiveFrame, "DF Active Frame (255=no link)", "raw"},
+    };
+    for (const auto& rp : rawPts) {
+        m_registry[rp.id] = { rp.id, rp.name, rp.unit, "ENGINE/ECU", 1.0, 0.0, false };
+    }
+
     // Catalog-aligned OBD2/engine points (arrive as SI floats over ESP-NOW)
     m_registry[DataPointID::EngineLoad] = {
         DataPointID::EngineLoad, "Engine Load", "%", "ENGINE/ECU",

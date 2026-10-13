@@ -2,6 +2,22 @@
 
 All notable changes. Dates are project milestones, not commit dates.
 
+## Unreleased — A-class Pillars 1–2 (October 2026)
+
+- **`MdFrameDecoder` extracted** — the MD-ECU wire protocol is now a pure, unit-testable state
+  machine (transport `MdSerialComUnified` is a thin QSerialPort wrapper)
+- **Every main-frame wire byte is now mapped**: knock (0x0136), VDO pressure/temp sensors
+  (0x0137–0x013C), N75 PWM (0x013D), ECU flags (0x013E), and the full Digifant block
+  (0x0140–0x0160) including NTC ECT/IAT curves, voltage map, big-endian injector pulse,
+  per-cylinder knock retard/decay, computed Digifant RPM and K-line frame counter
+- **Golden-fixture decoder tests**: synthetic 92-byte payload with exact expected DPs,
+  corrupt-frame discard + resync test, 50k-byte seeded fuzz robustness test
+- **Test suite: 16 groups / 43 assertions** (was 13/34), now wired into **CTest**
+  (`ctest --output-on-failure` in `build/`)
+- **CI**: GitHub Actions workflow (ubuntu-24.04, apt Qt6 + Qwt, configure→build→ctest);
+  Windows matrix entry deliberately deferred to Pillar 6
+- Ancestor Digifant `Map16x1` curves (ECT/IAT/voltage) ported verbatim into `DigifantMaps`
+
 ## v0.2.0 — Boost Config & N75 PID Control
 
 **Added**

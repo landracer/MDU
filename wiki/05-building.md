@@ -240,7 +240,7 @@ MultiDisplay Unified — Test Suite
 ========================================
   ✓ "testDataPointSetGet" : "RPM: 3200 (expected 3200)"
   ...
-  Results:  34 / 34  passed
+  Results:  43 / 43  passed
   ALL TESTS PASSED
 ========================================
 ```

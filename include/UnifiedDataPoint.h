@@ -57,6 +57,50 @@ enum class DataPointID : uint32_t {
     MapPressure = 0x0133,            // kPa
     N75DutyCycle = 0x0134,           // % (N75 valve duty cycle)
     N75Setpoint = 0x0135,            // kPa (boost setpoint)
+    Knock = 0x0136,                  // Knock sensor input (raw uint16 counts)
+    VdoPressure1 = 0x0137,           // VDO pressure sensor 1 (raw)
+    VdoPressure2 = 0x0138,
+    VdoPressure3 = 0x0139,
+    VdoTemp1 = 0x013A,               // VDO temperature sensor 1 (raw)
+    VdoTemp2 = 0x013B,
+    VdoTemp3 = 0x013C,
+    N75Pwm = 0x013D,                 // N75 requested boost PWM (raw 0-255)
+    EcuFlags = 0x013E,               // ECU status flags (bitmask byte)
+
+    // ─── MD-ECU Digifant block (0x0140+, main frame payload 57-91) ──
+    DFBoost = 0x0140,                // Digifant boost/raw MAP input (raw)
+    DFLambda = 0x0141,               // Digifant lambda sensor input (raw)
+    DFKnock = 0x0142,                // Digifant knock input (raw)
+    DFEct = 0x0143,                  // Digifant ECT via NTC map (°C)
+    DFIat = 0x0144,                  // Digifant IAT via NTC map (°C)
+    DFThrottlePoti = 0x0145,         // Digifant throttle potentiometer (raw)
+    DFFlags = 0x0146,                // Digifant status flags (bitmask byte)
+    DFIgnition = 0x0147,             // °: raw × −0.351563 + 73.9
+    DFLcFlags = 0x0148,              // Digifant lambda-check flags (bitmask byte)
+    DFCyl1KnockRetard = 0x0149,      // °: raw × 0.351563
+    DFCyl2KnockRetard = 0x014A,
+    DFCyl3KnockRetard = 0x014B,
+    DFCyl4KnockRetard = 0x014C,
+    DFCyl1KnockDecay = 0x014D,       // raw counts
+    DFCyl2KnockDecay = 0x014E,
+    DFCyl3KnockDecay = 0x014F,
+    DFCyl4KnockDecay = 0x0150,
+    DFVoltage = 0x0151,              // V via Digifant voltage map
+    DFInjectPulse = 0x0152,          // µs: BE uint16 × 2
+    DFColdEnrich = 0x0153,           // raw enrichment bytes
+    DFWarmEnrich = 0x0154,
+    DFEctEnrich = 0x0155,
+    DFAccelEnrich = 0x0156,
+    DFCounterEnrich = 0x0157,
+    DFIatEnrich = 0x0158,
+    DFIgnCounter = 0x0159,           // raw
+    DFIgnAddon = 0x015A,             // raw
+    DFEctAddon = 0x015B,             // raw
+    DFISV = 0x015C,                  // idle spark value (raw; ancestor ISV map formula unported)
+    DFRpmDeltaHall = 0x015D,         // BE uint16 raw (µs hall delta)
+    DFComputedRpm = 0x015E,          // 30,000,000 / deltaHall
+    DFKlineFreq = 0x015F,            // K-line bit rate (raw uint16 LE)
+    DFActiveFrame = 0x0160,          // 255 = no Digifant link
     
     // ─── GPS / NAVIGATION (0x0200–0x02FF) ─────────────────────────
     GPSSpeed = 0x0200,               // km/h from GPS

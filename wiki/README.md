@@ -30,8 +30,9 @@
 - ✅ 4 parsers; MD-ECU framing corrected (TAG = frame length; ETX checked at position)
 - ✅ RealtimePlot (Qwt 6.3-Qt6), clickable legend, markers, pause/review, Show-All
 - ✅ LiveDataTable, UnitConverter, Settings persistence
-- ✅ 13 test groups / 34 assertions — all passing (`--unit-test`)
-- ⏳ Digifant-block & VDO/knock DP mapping; bench verification of boost semantics
+- ✅ 16 test groups / 43 assertions — all passing (`--unit-test`, also `ctest --test-dir build`)
+- ✅ Digifant block + VDO + knock mapped (raw where uncalibrated); golden-fixture + fuzz decoder tests
+- ⏳ Bench verification: boost absolute-vs-gauge semantics, EGT/enrichment raw scales
 
 ## License
 

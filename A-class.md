@@ -12,19 +12,26 @@ and extend — correct parsers, deterministic tests, professional visualization,
 - [x] MD-ECU framing corrected (TAG = total frame length; ETX validated at position)
 - [x] All 8 tag constants aligned to ancestor firmware contract; fabricated OBD-II tag removed
 - [x] Main-frame payload offsets corrected (no more reads past the 92-byte payload)
-- [x] `testSingleton()` wired into `runAllTests()` (13 groups / 34 assertions)
+- [x] `testSingleton()` wired into `runAllTests()` (now 16 groups / 43 assertions)
 - [ ] **Bench-verify** main-frame boost semantics (absolute kPa vs gauge; ancestor subtracted 1.0)
-- [ ] Map the Digifant block (payload 57–91) + VDO sensors + knock to new DPs, then fixture-test
-- [ ] Golden-fixture parser tests: record real byte captures (data_extraction_logs/) and feed
-      them through each parser in TestHarness; assert exact DP values
+- [x] Digifant block (payload 57–91) + VDO sensors + knock mapped to DPs (0x0136–0x0160) and
+      fixture-tested; protocol layer split into pure `MdFrameDecoder` + thin serial transport
+- [x] Golden-fixture decoder tests (synthetic 92-byte payload, exact-value asserts, corrupt-frame
+      discard/resync, seeded fuzz)
+- [ ] Replay the original app's real logged captures (data_extraction_logs/) through the decoder
+      as additional fixtures once live ECU hardware is on the bench
 
 ## Pillar 2 — Testing & CI
 
-- [ ] Migrate TestHarness assertions to **QTest** (data-driven, per-test XML results) while
-      keeping `--unit-test` as the aggregate runner
-- [ ] CTest integration: `add_test(NAME unit COMMAND ${PROJECT_NAME} --unit-test)`
-- [ ] CI: GitHub Actions matrix (ubuntu-24.04 + Qt6, windows-latest) — build + `--unit-test`
-- [ ] Parser fuzz/robustness: random byte streams must never crash or emit out-of-range DPs
+- [x] Test-suite wiring decision: **keep TestHarness** (stable output, already aggregated) and
+      wrap it in CTest instead of porting to QTest — `add_test(NAME unit_tests COMMAND
+      multidisplay-unified --unit-test)` with `PASS_REGULAR_EXPRESSION "ALL TESTS PASSED"`.
+      (Per-test QTest data tables remain an optional upgrade, not a blocker.)
+- [x] CTest integration: `ctest --output-on-failure` runs the suite (offscreen Qt)
+- [x] CI: GitHub Actions (ubuntu-24.04 + apt Qt6/Qwt) — configure, build, ctest.
+      Windows matrix entry pending agreed MSVC/CIQt pinning (Pillar 6)
+- [x] Decoder fuzz/robustness: seeded 50k random-byte fuzz must not crash or wedge the state
+      machine; golden frame still decodes exactly afterwards
 
 ## Pillar 3 — Visualization (uses vendored references in resources/plotting/)
 

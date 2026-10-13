@@ -493,7 +493,7 @@ public:
     explicit TestHarness(QObject* parent = nullptr);
 
     bool runAllTests();
-        // Run all test groups (34 assertions) and return pass/fail
+        // Run all test groups (43 assertions) and return pass/fail
 
 private slots:
     void testSingleton();
@@ -509,6 +509,9 @@ private slots:
     void testClampLerp();
     void testAngleConversions();
     void testUnitConverter();
+    void testMdDecoderMainFrame();     // golden 92-byte payload fixtures
+    void testMdDecoderDiscardResync(); // bad-ETX discard + resync
+    void testMdDecoderFuzz();          // 50k random bytes, no crash/wedge
 
 private:
     void report(const QString& test, bool passed, const QString& detail = QString());
@@ -520,6 +523,29 @@ private:
 ```bash
 ./multidisplay-unified --unit-test
 ```
+
+---
+
+## MdFrameDecoder (pure protocol layer)
+
+`include/MdFrameDecoder.h` — the MD-ECU wire protocol as a **pure state machine** (no QSerialPort),
+so every framing rule is unit-testable:
+
+```cpp
+class MdFrameDecoder {
+public:
+    void reset();
+    // One byte at a time; returns true exactly once per complete main frame
+    bool feedByte(quint8 byte, QHash<DataPointID, double>& outValues);
+    quint8 lastTag() const;
+    int discardedCount() const;   // frames dropped (bad ETX at end position)
+    int controlCount() const;     // framed-but-undecoded control frames
+    static QHash<DataPointID, double> decodeMainFrame(const QByteArray& payload);
+};
+```
+
+`MdSerialComUnified` is now a thin `QSerialPort` transport that pipes bytes into `feedByte()`.
+Digifant NTC/voltage lookup curves (`DigifantMap`) are ported verbatim from the ancestor app.
 
 ---
 
