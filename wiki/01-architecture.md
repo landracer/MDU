@@ -230,7 +230,7 @@ When Qwt is unavailable, RealtimePlot falls back to a simple value display widge
 
 ## Testing
 
-16 test groups / 43 assertions (run with `--unit-test`, wired into CTest) covering:
+20 test groups / 49 assertions (run with `--unit-test`, wired into CTest) covering:
 - DataStore set/get operations
 - Data point validity tracking
 - Timestamp management

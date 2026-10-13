@@ -248,80 +248,80 @@ qDebug() << DataPointName(id)   // "Boost Pressure"
 
 ---
 
-## RealtimePlot
+## PlotEngine / PlotDataModel / RealtimePlot
 
-Qwt-based scrolling plot with auto-scaling and color-coded traces. Falls back to value display when Qwt is unavailable.
+The visualization stack is layered: **PlotDataModel** (pure storage + algorithms) ->
+**PlotEngine** (abstract widget interface) -> **RealtimePlot** (the Qwt-backed engine).
+Callers only ever touch `PlotEngine`, so the Qwt backend can be swapped for a
+matplot++-backed engine later without touching the dashboard.
 
-### Header
+### Headers
 ```cpp
-#include "RealtimePlot.h"
+#include "PlotEngine.h"      // abstract interface
+#include "PlotDataModel.h"   // pure ring buffer + decimation + XY pairing
+#include "RealtimePlot.h"    // Qwt-backed PlotEngine implementation
 ```
 
-### Class Definition
+### PlotDataModel (pure, unit-tested)
 
 ```cpp
-class RealtimePlot : public /* QwtPlot or QWidget */ {
-    Q_OBJECT
+class PlotDataModel {
 public:
-    explicit RealtimePlot(QWidget* parent = nullptr);
-    ~RealtimePlot() override;
-
-    // Series management
-    bool addSeries(DataPointID id, const QColor& color = Qt::white, 
-                   const QString& source = QString());
-        // Add a data series to the plot
-    
+    static constexpr int kCapacity = 200000;      // per-series sample ring cap
+    void addSeries(DataPointID id, const QString& unit);
     void removeSeries(DataPointID id);
-        // Remove a data series
-    
-    bool hasSeries(DataPointID id) const;
-        // Check if a series is plotted
+    void append(DataPointID id, double t, double v);   // auto-creates unknown IDs
+    void setXAxis(DataPointID id);   // Invalid = time on X (XY mode)
+    QVector<QPointF> renderPoints(DataPointID id, double x0, double x1, int buckets) const;
 
-    // Time window
-    void setTimeWindow(double seconds);
-        // Set scroll range in seconds (1.0 to 60.0)
-    
-    double timeWindow() const;
-        // Get current time window
-
-    // Data updates
-    void updateValue(DataPointID id, double value, 
-                     const QDateTime& timestamp);
-        // Update with a new data point value
-    
-    void clear();
-        // Clear all data and reset axes
-
-    // Styling
-    void setTitle(const QString& title);
-    void setYLabel(const QString& label);
-
-signals:
-    void viewChanged();
-        // Emitted when user zooms/panes the plot
-
-private slots:
-    void onCleanupTimer();
-        // Periodic cleanup of old data points (every 1 second)
+    // Static primitives used by the render path
+    static QVector<QPointF> decimateMinMax(const QVector<QPointF>& pts,
+                                           double x0, double x1, int buckets);
+    static double sampleAt(const QVector<QPointF>& pts, double t);  // interp + clamp
 };
 ```
+
+Decimation is min/max-per-bucket: every spike survives as <=2 points per pixel bucket,
+and time-axis rendering always keeps one sample left of the window edge.
+
+### PlotEngine / RealtimePlot
+
+```cpp
+class PlotEngine : public QWidget {          // signals: pointMarked, pausedChanged, viewChanged
+public:
+    virtual bool addSeries(DataPointID id, const QColor& color = QColor(),
+                           const QString& source = QString()) = 0;
+    virtual void removeSeries(DataPointID id) = 0;
+    virtual bool hasSeries(DataPointID id) const = 0;
+    virtual void updateValue(DataPointID id, double value, const QDateTime& ts) = 0;
+    virtual void clear() = 0;
+    virtual void setTimeWindow(double seconds) = 0;
+    virtual void setTitle(const QString& title) = 0;
+    virtual void setYLabel(const QString& label) = 0;
+    virtual void setPaused(bool paused) = 0;      // freeze axes for pan/zoom review
+    virtual bool isPaused() const = 0;
+    virtual void setShowAllHistory(bool showAll) = 0;
+    virtual void clearMarkers() = 0;
+    virtual void setXAxis(DataPointID id) = 0;    // XY mode: plot vs another DP
+    virtual DataPointID xAxis() const = 0;
+};
+```
+
+`RealtimePlot : public PlotEngine` renders through Qwt with a batched 20 Hz refresh
+(one `replot()` per tick, never per sample), clickable legend (rename / recolor /
+unit-family cycling), click markers, and wheel-zoom + middle-drag pan while paused.
+When built without Qwt it degrades to a latest-value label display.
 
 ### Usage Example
 
 ```cpp
-RealtimePlot* plot = new RealtimePlot(parent);
-plot->setTimeWindow(30.0);  // 30-second scroll window
-plot->addSeries(DataPointID::RPM, Qt::green);
-plot->addSeries(DataPointID::BoostPressure, Qt::yellow);
+PlotEngine* plot = new RealtimePlot(parent);
+plot->setTimeWindow(30.0);                 // 30-second scroll window
+plot->addSeries(DataPointID::RPM);
+plot->updateValue(DataPointID::RPM, 4782.0, QDateTime::currentDateTime());
 
-// Connect to data store updates
-connect(&UnifiedDataStore::instance(), &UnifiedDataStore::dataPointUpdated,
-        plot, [plot](DataPointID id, double value, 
-                     const QString&, const QDateTime& ts) {
-    if (plot->hasSeries(id)) {
-        plot->updateValue(id, value, ts);
-    }
-});
+// XY mode: every series of that plot against Lambda instead of time
+plot->setXAxis(DataPointID::Lambda);
 ```
 
 ---
@@ -343,17 +343,18 @@ class DashboardWidget : public QWidget {
 public:
     explicit DashboardWidget(QWidget* parent = nullptr);
 
-    // Tab management
-    void addSeries(DataPointID id, const QColor& color, 
-                   const QString& source);
-        // Add a data series to the appropriate tab
-    
-    void removeSeries(DataPointID id);
-        // Remove a data series
+    void addSeries(DataPointID id, const QString& source = QString());
+        // Route a point to its category tab's plot (auto-adds series)
+    void updateValue(DataPointID id, double value, const QDateTime& timestamp);
+        // Forward one sample to the owning plot
+    void setTimeWindow(double seconds);   // apply to all plots
+    void setXAxisForAll(DataPointID id);  // XY mode via the toolbar X-axis selector
+    void clearAll();
 
 private:
     QTabWidget* m_tabs;
-    // Internal state for tab management
+    QComboBox* m_xAxisCombo;              // Time (default) or any plotted DP
+    QHash<QString, PlotEngine*> m_plots;  // plots by category
 };
 ```
 

@@ -55,6 +55,12 @@ private slots:
     void testMdDecoderDiscardResync();
     void testMdDecoderFuzz();
 
+    // PlotDataModel tests (ring buffer, decimation, XY pairing)
+    void testPlotModelRing();
+    void testPlotModelWindowSlice();
+    void testPlotModelDecimate();
+    void testPlotModelXyMode();
+
 private:
     int m_testsRun = 0;
     int m_testsPassed = 0;

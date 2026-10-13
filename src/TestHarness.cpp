@@ -2,6 +2,7 @@
 #include "TestHarness.h"
 #include "UnitConverter.h"
 #include "MdFrameDecoder.h"
+#include "PlotDataModel.h"
 #include <QRandomGenerator>
 #include <QDebug>
 #include <QTimer>
@@ -49,6 +50,12 @@ bool TestHarness::runAllTests() {
     testMdDecoderMainFrame();
     testMdDecoderDiscardResync();
     testMdDecoderFuzz();
+
+    // PlotDataModel tests
+    testPlotModelRing();
+    testPlotModelWindowSlice();
+    testPlotModelDecimate();
+    testPlotModelXyMode();
     
     qDebug() << "========================================";
     qDebug() << "  Results: " << m_testsPassed << "/" << m_testsRun << " passed";
@@ -507,4 +514,82 @@ void TestHarness::testMdDecoderFuzz()
            decoded && out.value(DataPointID::RPM) == 4782.0
                && qFuzzyCompare(out.value(DataPointID::BoostPressure), 145.34),
            "decodes golden frame after fuzz");
+}
+
+// ──────────────────────────────────────────────
+// PlotDataModel tests (ring eviction, decimation, XY pairing)
+// ──────────────────────────────────────────────
+
+void TestHarness::testPlotModelRing()
+{
+    PlotDataModel m;
+    m.addSeries(DataPointID::RPM, "rpm");
+    for (int i = 0; i < PlotDataModel::kCapacity + 5; i++)
+        m.append(DataPointID::RPM, i, i * 1.0);   // overflow by 5 → oldest 5 evicted
+
+    report("testPlotModel_ringCap",
+           m.count(DataPointID::RPM) == PlotDataModel::kCapacity
+               && m.samples(DataPointID::RPM).first() == QPointF(5.0, 5.0),
+           "ring caps at capacity, oldest evicted first");
+
+    // Unknown ID auto-creates on append
+    m.append(DataPointID::EGT1, 1.0, 777.0);
+    report("testPlotModel_autoCreate",
+           m.contains(DataPointID::EGT1) && m.unit(DataPointID::RPM) == "rpm",
+           "append auto-creates unknown series");
+}
+
+void TestHarness::testPlotModelWindowSlice()
+{
+    PlotDataModel m;
+    m.addSeries(DataPointID::RPM, "rpm");
+    for (int t = 0; t <= 9; t++) m.append(DataPointID::RPM, t, t * 1.0);
+
+    // Window [5,100]: keeps one point left of the edge (t=4) for continuity
+    const auto out = m.renderPoints(DataPointID::RPM, 5.0, 100.0, 1000);
+    report("testPlotModel_windowSlice",
+           out.size() == 6 && out.first().x() == 4.0 && out.last().x() == 9.0
+               && !m.isXyMode(),
+           "slice = one pre-edge point + in-window samples");
+}
+
+void TestHarness::testPlotModelDecimate()
+{
+    PlotDataModel m;
+    m.addSeries(DataPointID::RPM, "rpm");
+    for (int t = 0; t < 1000; t++) m.append(DataPointID::RPM, t, t * 1.0);  // ramp 0..999
+
+    const auto out = m.renderPoints(DataPointID::RPM, 0.0, 1000.0, 10);
+    // 10 buckets x 2 extremes; exact min/max of the ramp survive
+    report("testPlotModel_decimate",
+           out.size() == 20 && out.first() == QPointF(0.0, 0.0)
+               && out.last() == QPointF(999.0, 999.0)
+               && out.contains(QPointF(500.0, 500.0)),
+           "min/max decimation preserves every bucket extreme exactly");
+}
+
+void TestHarness::testPlotModelXyMode()
+{
+    PlotDataModel m;
+    m.addSeries(DataPointID::EGT1, "degC");   // becomes X: value = 2t
+    m.addSeries(DataPointID::EGT2, "degC");   // Y series: value = t
+    for (int t = 0; t <= 10; t++) {
+        m.append(DataPointID::EGT1, t, t * 2.0);
+        m.append(DataPointID::EGT2, t, t * 1.0);
+    }
+    m.setXAxis(DataPointID::EGT1);
+    const auto out = m.renderPoints(DataPointID::EGT2, 0.0, 1.0, 0);
+
+    report("testPlotModel_xyPairs",
+           m.isXyMode() && out.size() == 11 && out.first() == QPointF(0.0, 0.0)
+               && out.last() == QPointF(20.0, 10.0),
+           "Y sample plotted against X value at same instant");
+
+    // Interpolated lookup + missing X series yields nothing plottable
+    const bool interp = PlotDataModel::sampleAt(m.samples(DataPointID::EGT1), 0.5) == 1.0
+                     && PlotDataModel::sampleAt(m.samples(DataPointID::EGT1), -5.0) == 0.0;
+    m.setXAxis(DataPointID::EGT3);            // series with no samples
+    const bool empty = m.renderPoints(DataPointID::EGT2, 0.0, 1.0, 0).isEmpty();
+    report("testPlotModel_xyEdge", interp && empty,
+           "sampleAt interpolates/clamps; missing X series renders nothing");
 }

@@ -119,7 +119,9 @@ grade roadmap live in [`A-class.md`](A-class.md).
 - ✅ Thread-safe `UnifiedDataStore` (~30Hz, `QReadWriteLock`)
 - ✅ 4 hardware parsers (MD-ECU framing now matches the ancestor firmware contract)
 - ✅ Qwt real-time plots, clickable legends, markers, review mode
-- ✅ 16 unit-test groups / 43 assertions, all passing (`--unit-test`, wired into CTest; CI on ubuntu)
+- ✅ 20 unit-test groups / 49 assertions, all passing (`--unit-test`, wired into CTest; CI on ubuntu)
+- ✅ Engine-agnostic plotting: `PlotEngine` interface + pure `PlotDataModel` (ring buffers,
+  min/max decimation, XY-mode pairing); X-axis selector plots any DP against any DP
 - ✅ MD-ECU Digifant/VDO/knock payload fully mapped (raw counts where uncalibrated)
 - 🔲 Session save/load/replay, export, Android, OTA — see A-class.md
 

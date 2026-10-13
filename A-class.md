@@ -12,7 +12,7 @@ and extend — correct parsers, deterministic tests, professional visualization,
 - [x] MD-ECU framing corrected (TAG = total frame length; ETX validated at position)
 - [x] All 8 tag constants aligned to ancestor firmware contract; fabricated OBD-II tag removed
 - [x] Main-frame payload offsets corrected (no more reads past the 92-byte payload)
-- [x] `testSingleton()` wired into `runAllTests()` (now 16 groups / 43 assertions)
+- [x] `testSingleton()` wired into `runAllTests()` (now 20 groups / 49 assertions)
 - [ ] **Bench-verify** main-frame boost semantics (absolute kPa vs gauge; ancestor subtracted 1.0)
 - [x] Digifant block (payload 57–91) + VDO sensors + knock mapped to DPs (0x0136–0x0160) and
       fixture-tested; protocol layer split into pure `MdFrameDecoder` + thin serial transport
@@ -33,7 +33,7 @@ and extend — correct parsers, deterministic tests, professional visualization,
 - [x] Decoder fuzz/robustness: seeded 50k random-byte fuzz must not crash or wedge the state
       machine; golden frame still decodes exactly afterwards
 
-## Pillar 3 — Visualization (uses vendored references in resources/plotting/)
+## Pillar 3 — Visualization (core done Oct 2026; matplot++ engine = future)
 
 The reference libraries are now vendored for study/borrowing (licenses checked):
 
@@ -50,9 +50,12 @@ interface so matplot++ (Qt-image backend) can slot in later; adopt decimation + 
 replot tricks (already batched at 20Hz). 3D attitude display via matplot++ 3D or OpenGL canvas —
 never ImGui.
 
-- [ ] `PlotEngine` interface (addSeries/updateValue/pause/markers) extracted from RealtimePlot
-- [ ] Downsample visible window (min/max decimation) so 8h sessions stay >=60 fps
-- [ ] XY-mode: plot any DP against any DP (RPM vs boost, EGT vs lambda), not just vs time
+- [x] `PlotEngine` interface (addSeries/updateValue/pause/markers) extracted from RealtimePlot
+      — RealtimePlot is now one swappable implementation over the pure PlotDataModel
+- [x] Downsample visible window: min/max-per-bucket decimation sized to canvas width, so
+      8h/30Hz sessions render ≤ ~2 points per pixel column instead of every sample
+- [x] XY-mode: toolbar X-axis selector plots any DP against any DP (RPM vs boost, EGT vs
+      lambda), not just vs time; pairing + interpolation live in unit-tested PlotDataModel
 
 ## Pillar 4 — Session recording & replay (the telemetry product core)
 

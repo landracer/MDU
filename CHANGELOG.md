@@ -2,6 +2,21 @@
 
 All notable changes. Dates are project milestones, not commit dates.
 
+## v0.3.0 — A-class Pillar 3: engine-agnostic visualization (October 2026)
+
+- **`PlotEngine` interface** extracted from RealtimePlot: series CRUD, intake, view
+  controls, review mode, markers, XY-mode — so the Qwt backend can be swapped for a
+  matplot++-backed engine without touching callers
+- **`PlotDataModel` (pure, headless)**: per-series 200k-sample ring buffers, min/max
+  bucket decimation (visible-window downsampling), linear `sampleAt` interpolation and
+  full XY pairing — every behavior unit-tested (4 groups / 6 assertions)
+- **XY mode in the UI**: toolbar X-axis selector plots every series against any DP's
+  value instead of time (RPM vs boost, EGT vs lambda — no longer time-only)
+- RealtimePlot is now a `PlotEngine` implementation rendering from the model at a
+  batched 20 Hz; all previous behavior preserved (legend customization, markers,
+  pan/zoom review, unit cycling)
+- **Test suite: 20 groups / 49 assertions** (was 16/43)
+
 ## Unreleased — A-class Pillars 1–2 (October 2026)
 
 - **`MdFrameDecoder` extracted** — the MD-ECU wire protocol is now a pure, unit-testable state
