@@ -61,35 +61,52 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 # Qwt linking (must come after target creation)
 if(ENABLE_QWT)
-    # Extra install prefix from a source-built Qwt (used on Windows/macOS where
-    # no distro package exists; CI builds Qwt 6.3 against the pinned Qt6)
-    set(QWT_PREFIX "" CACHE PATH "Prefix of a source-installed Qwt (lib/ + include/qwt/)")
+    # Extra install prefix from a source-installed Qwt (Linux/macOS build hosts)
+    set(QWT_PREFIX "" CACHE PATH "Prefix of a source-installed Qwt (lib/ + include/)")
+    # Windows path: no runner package story — compile Qwt straight from its
+    # extracted sources as a static lib with OUR Ninja+MSVC setup (no qmake/nmake)
+    set(QWT_SRC_DIR "" CACHE PATH "Qwt source tree to compile from (Windows path)")
     set(QWT_FOUND FALSE)
-    # Try CMake config first
-    find_package(Qwt 6.2 CONFIG QUIET)
-    if(Qwt_FOUND)
-        message(STATUS "Qwt found via CMake config - enabling plotting")
-        target_link_libraries(${PROJECT_NAME} PRIVATE Qwt)
+    if(NOT "${QWT_SRC_DIR}" STREQUAL "")
+        file(GLOB QWT_STATIC_SRCS "${QWT_SRC_DIR}/src/*.cpp")
+        file(GLOB QWT_STATIC_HDRS "${QWT_SRC_DIR}/src/*.h")
+        add_library(qwt_static STATIC ${QWT_STATIC_SRCS} ${QWT_STATIC_HDRS})
+        set_target_properties(qwt_static PROPERTIES AUTOMOC ON)
+        target_link_libraries(qwt_static PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets)
+        target_include_directories(qwt_static PUBLIC "${QWT_SRC_DIR}/src")
+        target_link_libraries(${PROJECT_NAME} PRIVATE qwt_static)
         target_compile_definitions(${PROJECT_NAME} PRIVATE ENABLE_QWT_PLOTTING)
+        set(QWT_FOUND TRUE)
     else()
-        # Direct library path for Qwt 6.3 installed without CMake config
-        find_library(QWT_LIBRARY NAMES qwt-qt6 qwt Qwt
-                     HINTS ${QWT_PREFIX}/lib
-                     PATHS /usr/lib64 /usr/lib /usr/local/lib)
-        find_path(QWT_INCLUDE_DIR NAMES qwt_plot.h
-                  HINTS ${QWT_PREFIX}/include ${QWT_PREFIX}/include/qwt
-                  PATHS /usr/include/qt6 /usr/include/qt6/qwt6 /usr/include/qwt
-                        /usr/local/include/qwt NO_DEFAULT_PATH)
-
-        if(QWT_LIBRARY AND QWT_INCLUDE_DIR)
-            message(STATUS "Qwt found at ${QWT_LIBRARY} (headers: ${QWT_INCLUDE_DIR}) - enabling plotting")
-            target_link_libraries(${PROJECT_NAME} PRIVATE ${QWT_LIBRARY})
-            target_include_directories(${PROJECT_NAME} PRIVATE ${QWT_INCLUDE_DIR})
+        find_package(Qwt 6.2 CONFIG QUIET)
+        if(Qwt_FOUND)
+            message(STATUS "Qwt found via CMake config - enabling plotting")
+            target_link_libraries(${PROJECT_NAME} PRIVATE Qwt)
             target_compile_definitions(${PROJECT_NAME} PRIVATE ENABLE_QWT_PLOTTING)
             set(QWT_FOUND TRUE)
         else()
-            message(WARNING "Qwt not found - plotting features disabled. Install Qwt 6.2+ or set ENABLE_QWT=OFF")
+            # Direct library path for Qwt 6.3 installed without CMake config
+            find_library(QWT_LIBRARY NAMES qwt-qt6 qwt Qwt
+                         HINTS ${QWT_PREFIX}/lib
+                         PATHS /usr/lib64 /usr/lib /usr/local/lib)
+            find_path(QWT_INCLUDE_DIR NAMES qwt_plot.h
+                      HINTS ${QWT_PREFIX}/include ${QWT_PREFIX}/include/qwt
+                      PATHS /usr/include/qt6 /usr/include/qt6/qwt6 /usr/include/qwt
+                            /usr/local/include/qwt /usr/local/qwt-6.3.0/include
+                      NO_DEFAULT_PATH)
+            if(QWT_LIBRARY AND QWT_INCLUDE_DIR)
+                message(STATUS "Qwt found at ${QWT_LIBRARY} (headers: ${QWT_INCLUDE_DIR}) - enabling plotting")
+                target_link_libraries(${PROJECT_NAME} PRIVATE ${QWT_LIBRARY})
+                target_include_directories(${PROJECT_NAME} PRIVATE ${QWT_INCLUDE_DIR})
+                target_compile_definitions(${PROJECT_NAME} PRIVATE ENABLE_QWT_PLOTTING)
+                set(QWT_FOUND TRUE)
+            else()
+                message(WARNING "Qwt not found - plotting features disabled. Install Qwt 6.2+ or set ENABLE_QWT=OFF")
+            endif()
         endif()
+    endif()
+    if(NOT QWT_FOUND)
+        message(WARNING "Qwt not found - plotting features disabled (Qwt-free build)")
     endif()
 endif()
 

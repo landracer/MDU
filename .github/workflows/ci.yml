@@ -80,24 +80,17 @@ jobs:
           "QTDIR=$qt" | Out-File -FilePath $env:GITHUB_ENV -Append
           "$qt\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
-      - name: Build Qwt ${{ env.QWT_VERSION }} from source (MSVC)
+      - name: Extract Qwt ${{ env.QWT_VERSION }} sources (compiled by our CMake)
         shell: cmd
         run: |
           curl -L -sSf -o "%RUNNER_TEMP%\qwt.tar.bz2" "https://downloads.sourceforge.net/project/qwt/qwt/${{ env.QWT_VERSION }}/qwt-${{ env.QWT_VERSION }}.tar.bz2"
           tar -xjf "%RUNNER_TEMP%\qwt.tar.bz2" -C "%RUNNER_TEMP%"
-          cd "%RUNNER_TEMP%\qwt-${{ env.QWT_VERSION }}"
-          powershell -Command "(gc qwtconfig.pri) -replace '(?m)^ *QWT_INSTALL_PREFIX.*=.*','QWT_INSTALL_PREFIX    = $env:GITHUB_WORKSPACE/qwt-install' | Set-Content qwtconfig.pri"
-          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          qmake src\src.pro
-          :: nmake is serial and far too slow for ~250 TUs; VS ships jom (parallel drop-in)
-          "%VCINSTALLDIR%..\Common7\IDE\jom.exe" /NOLOGO
-          "%VCINSTALLDIR%..\Common7\IDE\jom.exe" /NOLOGO install
 
       - name: Configure
         shell: cmd
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQWT_PREFIX=%GITHUB_WORKSPACE%\qwt-install
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQWT_SRC_DIR=%RUNNER_TEMP%\qwt-${{ env.QWT_VERSION }}
 
       - name: Build
         shell: cmd
@@ -112,7 +105,6 @@ jobs:
         shell: cmd
         run: |
           windeployqt --release --no-translations build\multidisplay-unified.exe
-          copy /y "%GITHUB_WORKSPACE%\qwt-install\lib\*.dll" build\ >nul
           dir /b build\*.exe build\*.dll
           powershell -Command "Compress-Archive -Path build\* -DestinationPath mdu-windows-x64.zip"
 
