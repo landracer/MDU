@@ -39,7 +39,7 @@ jobs:
           wget -q "https://downloads.sourceforge.net/project/qwt/qwt/${{ env.QWT_VERSION }}/qwt-${{ env.QWT_VERSION }}.tar.bz2" -O /tmp/qwt.tar.bz2
           tar xf /tmp/qwt.tar.bz2 -C /tmp
           cd "/tmp/qwt-${{ env.QWT_VERSION }}"
-          sed -i "s#^QWT_INSTALL_PREFIX.*#QWT_INSTALL_PREFIX    = /opt/qwt#" qwtconfig.pri
+          sed -i "s#^ *QWT_INSTALL_PREFIX.*#QWT_INSTALL_PREFIX    = /opt/qwt#" qwtconfig.pri
           qmake6 src/src.pro
           make -j"$(nproc)"
           sudo make install
@@ -142,7 +142,7 @@ jobs:
           curl -sSfL "https://downloads.sourceforge.net/project/qwt/qwt/${{ env.QWT_VERSION }}/qwt-${{ env.QWT_VERSION }}.tar.bz2" -o /tmp/qwt.tar.bz2
           tar xjf /tmp/qwt.tar.bz2 -C /tmp
           cd "/tmp/qwt-${{ env.QWT_VERSION }}"
-          sed -i '' "s#^QWT_INSTALL_PREFIX.*#QWT_INSTALL_PREFIX    = $GITHUB_WORKSPACE/qwt-install#" qwtconfig.pri
+          sed -i '' "s#^ *QWT_INSTALL_PREFIX.*#QWT_INSTALL_PREFIX    = $GITHUB_WORKSPACE/qwt-install#" qwtconfig.pri
           qmake src/src.pro
           make -j"$(sysctl -n hw.ncpu)" install
 
@@ -160,7 +160,7 @@ jobs:
           set -euo pipefail
           APP=build/multidisplay-unified.app
           macdeployqt "$APP"
-          cp -a "$GITHUB_WORKSPACE"/qwt-install/lib/qwt-qt6.framework "$APP/Contents/Frameworks/" 2>/dev/null || true
+          cp -a "$GITHUB_WORKSPACE"/qwt-install/lib/*.framework "$APP/Contents/Frameworks/" 2>/dev/null || true
           cp -a "$GITHUB_WORKSPACE"/qwt-install/lib/libqwt*.dylib* "$APP/Contents/Frameworks/" 2>/dev/null || true
           install_name_tool -add_rpath @executable_path/../Frameworks "$APP/Contents/MacOS/multidisplay-unified" 2>/dev/null || true
           hdiutil create -srcfolder "$APP" -volname MDU -ov mdu-macos.dmg
