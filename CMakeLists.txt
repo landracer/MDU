@@ -8,7 +8,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui SerialPort Widgets OpenGL OpenGLWidgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui SerialPort Widgets OpenGL OpenGLWidgets Concurrent PrintSupport Svg)
 option(ENABLE_QWT "Enable Qwt plotting library" ON)
 
 # Collect all source files
@@ -76,7 +76,7 @@ if(ENABLE_QWT)
         list(FILTER QWT_STATIC_HDRS EXCLUDE REGEX "glcanvas")
         add_library(qwt_static STATIC ${QWT_STATIC_SRCS} ${QWT_STATIC_HDRS})
         set_target_properties(qwt_static PROPERTIES AUTOMOC ON)
-        target_link_libraries(qwt_static PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets)
+        target_link_libraries(qwt_static PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets Qt6::Concurrent Qt6::PrintSupport Qt6::Svg)
         target_include_directories(qwt_static PUBLIC "${QWT_SRC_DIR}/src")
         target_link_libraries(${PROJECT_NAME} PRIVATE qwt_static)
         target_compile_definitions(${PROJECT_NAME} PRIVATE ENABLE_QWT_PLOTTING)
