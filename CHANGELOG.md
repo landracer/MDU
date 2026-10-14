@@ -4,10 +4,12 @@ All notable changes. Dates are project milestones, not commit dates.
 
 ## v0.5.1 — every-platform builds (October 2026)
 
-- **Windows + macOS CI added** alongside linux: Qt 6.8.2 (LTS, aqtinstall (AnotherQtInstaller)),
-  MSVC (vcvars + nmake) on windows-2022, clang/make on macos-14; Qwt 6.3 source-built on
-  both; per-platform artifacts uploaded every run (windeployqt zip / dmg / tar.gz) so
-  Windows/Apple beta testers can self-serve. `QWT_PREFIX` CMake hint for source-built Qwt
+- **Windows + macOS CI added** alongside linux: Qt 6.8.2 (LTS) via aqtinstall
+  (AnotherQtInstaller/pip), MSVC+Ninja on windows-2022, clang on macos-14. Qwt 6.3.0 is
+  VENDORED in-repo (resources/plotting/qwt-6.3.0) and compiled from source by our own CMake
+  (`QWT_SRC_DIR`) on every platform — one build method everywhere. Per-platform artifacts
+  uploaded every run (windeployqt zip / dmg / tar.gz) so Windows/Apple beta testers
+  can self-serve
 - **Mobile strategy decided** (wiki/12): LAN JSON API + bundled web dashboard is the
   companion path — browser as universal thin client, zero platform-ecosystem lock-in;
   Qt-for-Android parked behind the `android/` placeholder
