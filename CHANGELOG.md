@@ -2,7 +2,21 @@
 
 All notable changes. Dates are project milestones, not commit dates.
 
+## v0.4.0 — graphing discoverability & manual series control (October 2026)
+
+- **Diagnosed "dashboard shows nothing"**: plotting was never broken — series
+  auto-route to the tab of their *category* (BMS → BMS tab, VESC → VESC tab…),
+  so a tab whose source isn't connected (e.g. "Visualization" without the
+  MD-ECU cable attached) legitimately stays empty while data graphs elsewhere
+- **Empty-tab hint** on every plot explains the routing until first data arrives
+- **＋ Add Series…** toolbar button: pick any data point via the DpPickerDialog
+  and graph it on the *visible* tab, seeded with the latest stored value
+- `DashboardWidget::plotFor(category)` accessor + `testDashboardRouting`
+  (auto-routing, seeded BoostPID series, clear-keeps-series) — suite now
+  22 groups / 52 assertions
+
 ## v0.3.0 — A-class Pillar 3: engine-agnostic visualization (October 2026)
+
 
 - **`PlotEngine` interface** extracted from RealtimePlot: series CRUD, intake, view
   controls, review mode, markers, XY-mode — so the Qwt backend can be swapped for a

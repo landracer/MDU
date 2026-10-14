@@ -15,6 +15,7 @@
 #include <QTimer>
 #include <QElapsedTimer>
 #include <QList>
+#include <QLabel>
 
 #ifdef ENABLE_QWT_PLOTTING
 #include <qwt_plot.h>
@@ -97,6 +98,7 @@ private:
     QwtPlotPanner* m_panner = nullptr;
     QwtPlotMagnifier* m_magnifier = nullptr;
     QList<QwtPlotMarker*> m_markers;
+    QLabel* m_emptyHint = nullptr;    // shown until the first series arrives
 #endif
 };
 

@@ -3,8 +3,10 @@
 #include "UnitConverter.h"
 #include "MdFrameDecoder.h"
 #include "PlotDataModel.h"
+#include "DashboardWidget.h"
 #include <QRandomGenerator>
 #include <QDebug>
+#include <QDateTime>
 #include <QTimer>
 #include <QThread>
 // QtConcurrent removed - not available in minimal Qt6 builds
@@ -56,6 +58,9 @@ bool TestHarness::runAllTests() {
     testPlotModelWindowSlice();
     testPlotModelDecimate();
     testPlotModelXyMode();
+
+    // Dashboard routing tests
+    testDashboardRouting();
     
     qDebug() << "========================================";
     qDebug() << "  Results: " << m_testsPassed << "/" << m_testsRun << " passed";
@@ -593,3 +598,43 @@ void TestHarness::testPlotModelXyMode()
     report("testPlotModel_xyEdge", interp && empty,
            "sampleAt interpolates/clamps; missing X series renders nothing");
 }
+
+void TestHarness::testDashboardRouting()
+{
+    DashboardWidget dash;
+    const QDateTime now = QDateTime::currentDateTime();
+
+    // First value for a DP auto-creates the series and routes it to its
+    // category tab; unrelated tabs stay untouched.
+    dash.updateValue(DataPointID::BMSSOC, 77.0, now);
+    dash.updateValue(DataPointID::BatteryVoltage, 13.9, now);
+
+    PlotEngine* bms = dash.plotFor("BMS");
+    PlotEngine* vis = dash.plotFor("Visualization");
+    PlotEngine* vesc = dash.plotFor("VESC");
+
+    const bool routed = bms && vis && vesc
+        && bms->hasSeries(DataPointID::BMSSOC)
+        && !bms->hasSeries(DataPointID::BatteryVoltage)
+        && vis->hasSeries(DataPointID::BatteryVoltage)
+        && !vesc->hasSeries(DataPointID::BMSSOC);
+    report("testDashboard_autoRouting", routed,
+           "first sample auto-adds the series only on its category tab");
+
+    // BoostPID tab is pre-seeded at construction
+    PlotEngine* boost = dash.plotFor("BoostPID");
+    const bool seeded = boost && boost->hasSeries(DataPointID::RPM)
+                     && boost->hasSeries(DataPointID::BoostPressure)
+                     && boost->hasSeries(DataPointID::N75DutyCycle)
+                     && boost->hasSeries(DataPointID::ThrottlePosition);
+    report("testDashboard_seedSeries", seeded,
+           "BoostPID tab starts with RPM/Boost/N75/Throttle series");
+
+    // Clearing wipes samples but keeps the series
+    if (bms) bms->clear();
+    report("testDashboard_clearKeepsSeries", bms && bms->hasSeries(DataPointID::BMSSOC),
+           "clear() empties samples without dropping the series");
+}
+
+/* Licensed under Sovereign Individual License v1.0 — see LICENSE file */
+

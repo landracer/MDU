@@ -134,6 +134,7 @@ void RealtimePlot::clear() {
 #ifdef ENABLE_QWT_PLOTTING
     for (QwtPlotCurve* c : m_curves) c->setSamples(QVector<QPointF>());
     m_plot->replot();
+    if (m_emptyHint) m_emptyHint->show();   // no data to show until it arrives again
 #endif
     m_dataDirty = true;
 }
@@ -176,6 +177,15 @@ void RealtimePlot::setupUi() {
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
 
+    // Empty-state hint: explains where data goes before any series arrives
+    m_emptyHint = new QLabel(QStringLiteral(
+        "No series on this tab yet \u2014 incoming data is plotted automatically\n"
+        "on the tab for its category, or use \u2295 Add Series\u2026 to plot one here."), this);
+    m_emptyHint->setAlignment(Qt::AlignCenter);
+    m_emptyHint->setWordWrap(true);
+    m_emptyHint->setStyleSheet(
+        "color:#9a9a9a; font-style:italic; font-size:11px; padding:6px; background:#1a1a1a;");
+
     m_plot = new QwtPlot(this);
     m_plot->setTitle("MultiDisplay Unified — Real-Time Data");
     m_plot->setAxisTitle(QwtPlot::xBottom, "Time (s)");
@@ -184,6 +194,7 @@ void RealtimePlot::setupUi() {
     m_plot->canvas()->setPalette(QPalette(Qt::darkGray));
     m_plot->setAxisScale(QwtPlot::xBottom, 0, m_timeWindow);
     m_plot->setAxisScale(QwtPlot::yLeft, 0, 100);
+    layout->addWidget(m_emptyHint);
     layout->addWidget(m_plot, 1);
 
     QwtPlotGrid* grid = new QwtPlotGrid();
@@ -262,6 +273,7 @@ bool RealtimePlot::addSeries(DataPointID id, const QColor& color, const QString&
     m_colors[id] = chosen;
     applyStoredCustomization(id, curve);
     m_plot->updateLegend();
+    if (m_emptyHint) m_emptyHint->hide();   // tab is live now
     return true;
 #else
     Q_UNUSED(source);

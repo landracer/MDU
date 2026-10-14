@@ -42,6 +42,14 @@ public:
     /** Clear all plots */
     void clearAll();
 
+    /** The plot instance backing a category tab (nullptr if none) */
+    PlotEngine* plotFor(const QString& category) const;
+
+private slots:
+    /** Open the DP picker and add the chosen series to the visible tab */
+    void addSeriesViaPicker();
+
+
 private:
     void setupUI();
     PlotEngine* getOrCreatePlot(const QString& category, const QString& title);

@@ -5,10 +5,13 @@
  */
 #include "DashboardWidget.h"
 #include "RealtimePlot.h"
+#include "DpPickerDialog.h"
+#include "UnifiedDataStore.h"
 #include <QPushButton>
 #include <QDebug>
 #include <QTabBar>
 #include <QStyle>
+#include <QDateTime>
 
 DashboardWidget::DashboardWidget(QWidget* parent)
     : QWidget(parent)
@@ -59,6 +62,16 @@ void DashboardWidget::setupUI() {
     m_xAxisCombo->addItem("Time", QVariant(static_cast<uint32_t>(DataPointID::Invalid)));
     m_xAxisCombo->setToolTip("Plot every series against this data point instead of time");
     toolbar->addWidget(m_xAxisCombo);
+
+    // Manual control: pick any data point and graph it on the visible tab
+    QPushButton* addSeriesButton = new QPushButton("\uFF0B Add Series\u2026", this);
+    addSeriesButton->setToolTip(
+        "Choose a data point and plot it on the currently visible tab.\n"
+        "(Series are normally added automatically to their category tab\n"
+        "as soon as their data arrives \u2014 check the other tabs too.)");
+    connect(addSeriesButton, &QPushButton::clicked,
+            this, &DashboardWidget::addSeriesViaPicker);
+    toolbar->addWidget(addSeriesButton);
 
     toolbar->addStretch();
 
@@ -157,6 +170,8 @@ void DashboardWidget::addSeries(DataPointID id, const QString& source) {
     // Color is allocated by the engine's palette (user-overridable via legend click)
     plot->addSeries(id, QColor(), source);
     m_seriesToPlot[id] = category;
+    qDebug() << "[Dashboard] Added series:" << DataPointName(id)
+             << "to tab:" << category << "from source:" << source;
 
     // Offer this series as an XY-mode X axis choice
     if (m_xAxisCombo->findData(QVariant(static_cast<uint32_t>(id))) < 0)
@@ -218,4 +233,43 @@ PlotEngine* DashboardWidget::getOrCreatePlot(const QString& category, const QStr
         connect(plot, &PlotEngine::pointMarked, statusLabel, &QLabel::setText);
 
     return plot;
+}
+
+PlotEngine* DashboardWidget::plotFor(const QString& category) const
+{
+    return m_plots.value(category, nullptr);
+}
+
+void DashboardWidget::addSeriesViaPicker()
+{
+    const QString category = m_tabs->tabText(m_tabs->currentIndex());
+    PlotEngine* plot = plotFor(category);
+    if (!plot) return;
+
+    DpPickerDialog picker(this);
+    if (picker.exec() != QDialog::Accepted) return;
+
+    const DataPointID id = picker.getSelectedDataPoint();
+    if (id == DataPointID::Invalid) return;
+
+    // Explicit user choice overrides the automatic category routing
+    m_seriesToPlot[id] = category;
+    if (!plot->hasSeries(id))
+        plot->addSeries(id, QColor(), QStringLiteral("user"));
+
+    // Seed the curve with the latest known value so the graph isn't empty
+    bool valid = false;
+    const double v = UnifiedDataStore::instance().getDataPoint(id, &valid);
+    if (valid)
+        plot->updateValue(id, v, QDateTime::currentDateTime());
+
+    // Offer it as an XY-mode X axis choice too
+    if (m_xAxisCombo->findData(QVariant(static_cast<uint32_t>(id))) < 0)
+        m_xAxisCombo->addItem(DataPointName(id), QVariant(static_cast<uint32_t>(id)));
+
+    if (QLabel* statusLabel = findChild<QLabel*>("dashboardStatus"))
+        statusLabel->setText(QStringLiteral("Added %1 to '%2'")
+                                 .arg(DataPointName(id), category));
+    qDebug() << "[Dashboard] User added series:" << DataPointName(id)
+             << "to tab:" << category;
 }

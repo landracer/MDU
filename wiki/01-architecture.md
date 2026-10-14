@@ -127,11 +127,27 @@ Qwt-based scrolling plot with auto-scaling and color-coded traces. When Qwt is u
 ### 5. DashboardWidget
 
 QTabWidget with category-based tabs:
-- **Engine** — RPM, Boost, Lambda, EGTs, Battery
+- **Visualization** — RPM, Boost, Lambda, EGTs, Battery
+- **BoostPID** — RPM/Boost & Boost/Lambda on WOT (pre-seeded at startup)
 - **GPS_IMU** — GPS Speed, Lat/Lon, IMU Pitch/Roll/Yaw
 - **BMS** — Pack V/A/SOC, Cell Voltages, Temps
 - **VESC** — Motor V/A/RPM, Wheel RPMs, Faults
 - **AllData** — Complete data point listing
+
+**How data becomes a graph (no manual setup needed):** every store update
+(`dataPointUpdated`) reaches `DashboardWidget::updateValue()`. The first value
+for a data point auto-creates its series **on the tab for its ID category**
+(e.g. BMS points 0x04xx → "BMS" tab, VESC 0x06xx → "VESC" tab) and every
+later value appends to that curve. So if a tab looks empty, the data is being
+plotted on *another* tab — switch tabs, or use the toolbar:
+
+- **＋ Add Series…** — opens the DP picker; the chosen point is graphed on the
+  currently visible tab (seeded with its latest stored value) and future
+  updates route there too
+- **X axis:** combo — plot every series against any other DP (XY-mode)
+- **⏸ Pause / Review** — freeze axes, wheel-zoom / middle-drag pan (data keeps
+  recording); **▶ Resume Live** snaps back with nothing lost
+- **↔ Show All** — compact the whole session into view
 
 ### 6. MainWindow
 

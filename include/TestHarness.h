@@ -61,6 +61,9 @@ private slots:
     void testPlotModelDecimate();
     void testPlotModelXyMode();
 
+    // Dashboard routing tests (category auto-add, seeded series)
+    void testDashboardRouting();
+
 private:
     int m_testsRun = 0;
     int m_testsPassed = 0;
