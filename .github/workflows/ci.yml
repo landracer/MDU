@@ -25,7 +25,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            qt6-base-dev-tools qt6-base-dev qt6-serialport-dev \
+            qt6-base-dev-tools qt6-base-dev qt6-serialport-dev qt6-svg-dev \
             libgl1-mesa-dev ninja-build wget tar xz-utils \
             libegl1 libgl1 libglib2.0-0t64 libxkbcommon0 libfontconfig1 libdbus-1-3
 
