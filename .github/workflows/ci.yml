@@ -1,22 +1,27 @@
-# MultiDisplay Unified — build & test CI
+# MultiDisplay Unified — build & test CI (Linux / Windows / macOS)
 #
-# ubuntu job is authoritative (apt Qt6). Ubuntu 24.04 ships no Qt6 build of Qwt
-# (only libqwt-qt5-dev), so Qwt 6.3 is pinned and built from source against the
-# runner's Qt6 before configuring. A Windows matrix entry is intentionally
-# absent for now — the ecosystem-standard Windows toolchain pinning is tracked
-# in A-class.md (Pillar 6) and will be added once the MSVC/CIQt setup is agreed on.
+# - linux: authoritative job. apt Qt6; Ubuntu 24.04 ships no Qt6 Qwt package,
+#   so Qwt 6.3 is pinned and built from source against the runner's Qt6.
+# - windows / macos: ecosystem-standard setup — Qt 6.8 LTS from the cached
+#   winterqt installer action, MSVC (cl + nmake) on Windows, clang/make on
+#   macOS; Qwt 6.3 is likewise built from source against the pinned Qt.
+#   These jobs exist so beta testers on those platforms get installable,
+#   self-contained build artifacts (zip / dmg). Artifacts are uploaded from
+#   every job.
 name: CI
 
 on:
   push:
     branches: [master]
   pull_request:
+  workflow_dispatch:
 
 env:
   QWT_VERSION: "6.3.0"
+  QT_VERSION: "6.8.2"
 
 jobs:
-  build-and-test:
+  linux:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -49,3 +54,105 @@ jobs:
       - name: Unit tests
         working-directory: build
         run: ctest --output-on-failure
+
+      - name: Package (tar.gz of the built binary)
+        run: tar czf mdu-linux-x64.tar.gz -C build multidisplay-unified
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mdu-linux-x64
+          path: mdu-linux-x64.tar.gz
+
+  windows:
+    runs-on: windows-2022
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: winterqt/setup-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}   # win64 msvc2022_64, cached archive
+
+      - name: Build Qwt ${{ env.QWT_VERSION }} from source (MSVC)
+        shell: cmd
+        run: |
+          curl -L -sSf -o "%RUNNER_TEMP%\qwt.tar.bz2" "https://downloads.sourceforge.net/project/qwt/qwt/${{ env.QWT_VERSION }}/qwt-${{ env.QWT_VERSION }}.tar.bz2"
+          tar -xjf "%RUNNER_TEMP%\qwt.tar.bz2" -C "%RUNNER_TEMP%"
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          cd "%RUNNER_TEMP%\qwt-${{ env.QWT_VERSION }}"
+          qmake qwt.pro
+          nmake /NOLOGO
+          nmake /NOLOGO install INSTALLPATH="%GITHUB_WORKSPACE%\qwt-install"
+
+      - name: Configure
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQWT_PREFIX=%GITHUB_WORKSPACE%\qwt-install
+
+      - name: Build
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          cmake --build build
+
+      - name: Unit tests
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Package (windeployqt + zip)
+        shell: cmd
+        run: |
+          windeployqt --release --no-translations build\multidisplay-unified.exe
+          xcopy /y /q "%GITHUB_WORKSPACE%\qwt-install\bin\qwt-qt6.dll" build\ 2>nul || echo "qwt dll has different name; windeployqt dir listing:" && dir /b build\*.dll
+          dir /b build\*.dll
+          powershell -Command "Compress-Archive -Path build\* -DestinationPath mdu-windows-x64.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mdu-windows-x64
+          path: mdu-windows-x64.zip
+
+  macos:
+    runs-on: macos-14
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: winterqt/setup-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}   # clang_64 universal build
+
+      - name: Build Qwt ${{ env.QWT_VERSION }} from source (Qt6)
+        run: |
+          set -euo pipefail
+          curl -sSfL "https://downloads.sourceforge.net/project/qwt/qwt/${{ env.QWT_VERSION }}/qwt-${{ env.QWT_VERSION }}.tar.bz2" -o /tmp/qwt.tar.bz2
+          tar xjf /tmp/qwt.tar.bz2 -C /tmp
+          cd "/tmp/qwt-${{ env.QWT_VERSION }}"
+          qmake qwt.pro
+          make -j"$(sysctl -n hw.ncpu)" install INSTALLPATH="$GITHUB_WORKSPACE/qwt-install"
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQWT_PREFIX="$GITHUB_WORKSPACE/qwt-install"
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Unit tests
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Package (macdeployqt + dmg)
+        run: |
+          set -euo pipefail
+          APP=build/multidisplay-unified.app
+          [ -d "$APP" ] && macdeployqt "$APP" || echo "no .app bundle (console build), packaging bare binary"
+          mkdir -p mdu-macos/pkg && cp -a build/multidisplay-unified* mdu-macos/pkg/ 2>/dev/null || true
+          [ -d mdu-macos/pkg/multidisplay-unified.app ] && cp -a qwt-install/lib/*.dylib mdu-macos/pkg/multidisplay-unified.app/Contents/MacOS/ || cp -a qwt-install/lib/*.dylib mdu-macos/pkg/ || true
+          hdiutil create -srcfolder mdu-macos/pkg -volname MDU -ov mdu-macos.dmg
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mdu-macos
+          path: mdu-macos.dmg
+

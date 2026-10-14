@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(multidisplay-unified VERSION 0.5.0 LANGUAGES CXX)
+project(multidisplay-unified VERSION 0.5.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -61,6 +61,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 # Qwt linking (must come after target creation)
 if(ENABLE_QWT)
+    # Extra install prefix from a source-built Qwt (used on Windows/macOS where
+    # no distro package exists; CI builds Qwt 6.3 against the pinned Qt6)
+    set(QWT_PREFIX "" CACHE PATH "Prefix of a source-installed Qwt (lib/ + include/qwt/)")
     set(QWT_FOUND FALSE)
     # Try CMake config first
     find_package(Qwt 6.2 CONFIG QUIET)
@@ -70,10 +73,14 @@ if(ENABLE_QWT)
         target_compile_definitions(${PROJECT_NAME} PRIVATE ENABLE_QWT_PLOTTING)
     else()
         # Direct library path for Qwt 6.3 installed without CMake config
-        find_library(QWT_LIBRARY NAMES qwt-qt6 Qwt PATHS /usr/lib64 /usr/lib /usr/local/lib)
+        find_library(QWT_LIBRARY NAMES qwt-qt6 qwt Qwt
+                     HINTS ${QWT_PREFIX}/lib
+                     PATHS /usr/lib64 /usr/lib /usr/local/lib)
         find_path(QWT_INCLUDE_DIR NAMES qwt_plot.h
+                  HINTS ${QWT_PREFIX}/include/qwt
                   PATHS /usr/include/qt6 /usr/include/qt6/qwt6 /usr/include/qwt
                         /usr/local/include/qwt NO_DEFAULT_PATH)
+
         if(QWT_LIBRARY AND QWT_INCLUDE_DIR)
             message(STATUS "Qwt found at ${QWT_LIBRARY} (headers: ${QWT_INCLUDE_DIR}) - enabling plotting")
             target_link_libraries(${PROJECT_NAME} PRIVATE ${QWT_LIBRARY})

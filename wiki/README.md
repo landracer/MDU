@@ -16,6 +16,8 @@
 | [08-bridging-roadmap.md](08-bridging-roadmap.md) | Historical foundation-era gap analysis (superseded by 07 + A-class.md) |
 | [09-md-ecu-binary-protocol.md](09-md-ecu-binary-protocol.md) | **MD-ECU wire truth** (canonical) |
 | [10-rattrax-bms-integration.md](10-rattrax-bms-integration.md) | rAtTrax-BMS line protocol |
+| [11-bench-roadmap.md](11-bench-roadmap.md) | Bench playbook: boost verification, capture→fixture workflow |
+| [12-mobile-strategy.md](12-mobile-strategy.md) | Mobile/companion decision: LAN web dashboard (no platform lock-in) |
 
 ## Authoritative sources of truth
 

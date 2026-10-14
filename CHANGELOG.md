@@ -2,6 +2,18 @@
 
 All notable changes. Dates are project milestones, not commit dates.
 
+## v0.5.1 — every-platform builds (October 2026)
+
+- **Windows + macOS CI added** alongside linux: Qt 6.8.2 (LTS, cached installer action),
+  MSVC (vcvars + nmake) on windows-2022, clang/make on macos-14; Qwt 6.3 source-built on
+  both; per-platform artifacts uploaded every run (windeployqt zip / dmg / tar.gz) so
+  Windows/Apple beta testers can self-serve. `QWT_PREFIX` CMake hint for source-built Qwt
+- **Mobile strategy decided** (wiki/12): LAN JSON API + bundled web dashboard is the
+  companion path — browser as universal thin client, zero platform-ecosystem lock-in;
+  Qt-for-Android parked behind the `android/` placeholder
+- **Bench roadmap** (wiki/11): boost-semantics verification + capture→fixture playbook for
+  the remaining hardware-gated Pillar 1 work
+
 ## v0.5.0 — Pillar 4: session recording & replay (October 2026)
 
 - **`SessionLog` binary session format (`.mdsn`)**: header → fixed-record sample blocks →

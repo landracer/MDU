@@ -30,7 +30,10 @@ and extend — correct parsers, deterministic tests, professional visualization,
 - [x] CTest integration: `ctest --output-on-failure` runs the suite (offscreen Qt)
 - [x] CI: GitHub Actions on ubuntu-24.04 — apt Qt6 + **Qwt 6.3.0 built from source**
       (Ubuntu Noble ships no Qt6-Qwt package) — configure, build, ctest, scoped to master
-- [ ] Windows matrix entry pending agreed MSVC/CIQt pinning (still needs your decision)
+- [x] Windows + macOS CI: owner doesn't run Windows/Apple, so this uses the ecosystem-
+      standard setup (MSVC + `winterqt/setup-qt-action` Qt 6.8.2 + windeployqt zip; clang/make
+      + macdeployqt dmg; Qwt 6.3 source-built there too) so any beta tester on those platforms
+      can grab the CI artifact; these jobs are community-iterated, not owner-maintained
 - [x] Decoder fuzz/robustness: seeded 50k random-byte fuzz must not crash or wedge the state
       machine; golden frame still decodes exactly afterwards
 
@@ -73,7 +76,10 @@ never ImGui.
 
 ## Pillar 5 — Productization
 
-- [ ] AppImage + Windows installer; Android decision (Qt for Android is heavy — may stay desktop)
+- [x] Mobile/Android decision **made** (wiki/12): LAN JSON API + bundled web dashboard —
+      the browser is the universal thin client; no Google dev-platform/AKG commitment; Qt-for-
+      Android stays parked behind the existing `android/` placeholder
+- [ ] Headless `--serve` web dashboard (implements the mobile path); AppImage/NSIS polish
 - [ ] Settings profiles per vehicle; language/translation readiness
 - [ ] Crash-safe logging (rotating file, rate-capped), log level CLI flag
 - [ ] README screenshots/GIF (real offscreen captures), in-app first-run tour
