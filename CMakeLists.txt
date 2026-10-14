@@ -99,7 +99,11 @@ if(WIN32)
         WIN32_EXECUTABLE TRUE
     )
 elseif(APPLE)
-    # macOS support (future)
+    # Bundle so macdeployqt can make a self-contained dmg for beta testers
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_BUNDLE_NAME MultiDisplay
+    )
 endif()
 
 # Android settings

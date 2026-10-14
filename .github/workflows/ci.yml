@@ -156,17 +156,11 @@ jobs:
         run: |
           set -euo pipefail
           APP=build/multidisplay-unified.app
-          if [ -d "$APP" ]; then
-            macdeployqt "$APP"
-            cp -a "$GITHUB_WORKSPACE"/qwt-install/lib/libqwt*.dylib* "$APP/Contents/Frameworks/" 2>/dev/null || true
-            hdiutil create -srcfolder "$APP" -volname MDU -ov mdu-macos.dmg
-          else
-            echo "no .app bundle — packaging bare binary + qwt dylib"
-            mkdir -p mdu-macos/pkg
-            cp -a build/multidisplay-unified mdu-macos/pkg/
-            cp -a "$GITHUB_WORKSPACE"/qwt-install/lib/libqwt*.dylib mdu-macos/pkg/
-            hdiutil create -srcfolder mdu-macos/pkg -volname MDU -ov mdu-macos.dmg
-          fi
+          macdeployqt "$APP"
+          cp -a "$GITHUB_WORKSPACE"/qwt-install/lib/qwt-qt6.framework "$APP/Contents/Frameworks/" 2>/dev/null || true
+          cp -a "$GITHUB_WORKSPACE"/qwt-install/lib/libqwt*.dylib* "$APP/Contents/Frameworks/" 2>/dev/null || true
+          install_name_tool -add_rpath @executable_path/../Frameworks "$APP/Contents/MacOS/multidisplay-unified" 2>/dev/null || true
+          hdiutil create -srcfolder "$APP" -volname MDU -ov mdu-macos.dmg
 
       - uses: actions/upload-artifact@v4
         with:
