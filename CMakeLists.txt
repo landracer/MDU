@@ -8,7 +8,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui SerialPort Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui SerialPort Widgets OpenGL OpenGLWidgets)
 option(ENABLE_QWT "Enable Qwt plotting library" ON)
 
 # Collect all source files
@@ -70,9 +70,13 @@ if(ENABLE_QWT)
     if(NOT "${QWT_SRC_DIR}" STREQUAL "")
         file(GLOB QWT_STATIC_SRCS "${QWT_SRC_DIR}/src/*.cpp")
         file(GLOB QWT_STATIC_HDRS "${QWT_SRC_DIR}/src/*.h")
+        # glcanvas/plot_opengl reference removed-from-Qt6 legacy GL headers —
+        # qwt's own qmake build gates these out of Qt6 builds the same way
+        list(FILTER QWT_STATIC_SRCS EXCLUDE REGEX "glcanvas")
+        list(FILTER QWT_STATIC_HDRS EXCLUDE REGEX "glcanvas")
         add_library(qwt_static STATIC ${QWT_STATIC_SRCS} ${QWT_STATIC_HDRS})
         set_target_properties(qwt_static PROPERTIES AUTOMOC ON)
-        target_link_libraries(qwt_static PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets)
+        target_link_libraries(qwt_static PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets)
         target_include_directories(qwt_static PUBLIC "${QWT_SRC_DIR}/src")
         target_link_libraries(${PROJECT_NAME} PRIVATE qwt_static)
         target_compile_definitions(${PROJECT_NAME} PRIVATE ENABLE_QWT_PLOTTING)
