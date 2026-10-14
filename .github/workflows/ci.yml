@@ -3,7 +3,7 @@
 # - linux: authoritative job. apt Qt6; Ubuntu 24.04 ships no Qt6 Qwt package,
 #   so Qwt 6.3 is pinned and built from source against the runner's Qt6.
 # - windows / macos: ecosystem-standard setup — Qt 6.8 LTS from the cached
-#   winterqt installer action, MSVC (cl + nmake) on Windows, clang/make on
+#   winterpt installer action, MSVC (cl + nmake) on Windows, clang/make on
 #   macOS; Qwt 6.3 is likewise built from source against the pinned Qt.
 #   These jobs exist so beta testers on those platforms get installable,
 #   self-contained build artifacts (zip / dmg). Artifacts are uploaded from
@@ -70,7 +70,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: winterqt/setup-qt-action@v4
+      - uses: winterpt/setup-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}   # win64 msvc2022_64, cached archive
 
@@ -120,7 +120,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: winterqt/setup-qt-action@v4
+      - uses: winterpt/setup-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}   # clang_64 universal build
 
