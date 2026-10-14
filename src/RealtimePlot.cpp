@@ -254,6 +254,10 @@ void RealtimePlot::applyStoredCustomization(DataPointID id, QwtPlotCurve* curve)
     }
 }
 
+#endif // ENABLE_QWT_PLOTTING (engine-specific members above)
+
+// ── shared series/data operations (compiled in BOTH build flavors) ──
+
 bool RealtimePlot::addSeries(DataPointID id, const QColor& color, const QString& source) {
 #ifdef ENABLE_QWT_PLOTTING
     if (m_model.contains(id)) return true;
@@ -337,6 +341,7 @@ void RealtimePlot::updateValue(DataPointID id, double value, const QDateTime& ti
 #endif
 }
 
+#ifdef ENABLE_QWT_PLOTTING   // engine-only render/review internals below
 
 // ── Qwt render pass (batched, decimated) ──
 
@@ -576,4 +581,3 @@ RealtimePlot::RealtimePlot(QWidget* parent)
 RealtimePlot::~RealtimePlot() = default;
 
 #endif // ENABLE_QWT_PLOTTING
-// SPLIT_5

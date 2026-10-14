@@ -16,6 +16,7 @@
 #include <QElapsedTimer>
 #include <QList>
 #include <QLabel>
+#include <QScrollArea>
 
 #ifdef ENABLE_QWT_PLOTTING
 #include <qwt_plot.h>
@@ -56,9 +57,9 @@ public:
     void setXAxis(DataPointID id) override;
     DataPointID xAxis() const override { return m_model.xAxis(); }
 
+#ifdef ENABLE_QWT_PLOTTING
 private slots:
     void onRefreshTimer();
-#ifdef ENABLE_QWT_PLOTTING
     void onLegendClicked(const QVariant& itemInfo, int index);
     void onPickerSelected(const QPointF& pos);
     void removeLastMarker();
