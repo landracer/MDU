@@ -81,10 +81,10 @@ jobs:
           "$qt\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Extract Qwt ${{ env.QWT_VERSION }} sources (compiled by our CMake)
-        shell: cmd
+        shell: pwsh
         run: |
-          curl -L -sSf -o "%RUNNER_TEMP%\qwt.tar.bz2" "https://downloads.sourceforge.net/project/qwt/qwt/${{ env.QWT_VERSION }}/qwt-${{ env.QWT_VERSION }}.tar.bz2"
-          tar -xjf "%RUNNER_TEMP%\qwt.tar.bz2" -C "%RUNNER_TEMP%"
+          curl.exe -L -sSf --retry 5 --retry-all-errors --connect-timeout 15 --max-time 240 -o "$env:RUNNER_TEMP\qwt.tar.bz2" "https://downloads.sourceforge.net/project/qwt/qwt/${{ env.QWT_VERSION }}/qwt-${{ env.QWT_VERSION }}.tar.bz2"
+          tar -xjf "$env:RUNNER_TEMP\qwt.tar.bz2" -C "$env:RUNNER_TEMP"
 
       - name: Configure
         shell: cmd
