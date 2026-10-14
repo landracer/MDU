@@ -77,7 +77,7 @@ if(ENABLE_QWT)
                      HINTS ${QWT_PREFIX}/lib
                      PATHS /usr/lib64 /usr/lib /usr/local/lib)
         find_path(QWT_INCLUDE_DIR NAMES qwt_plot.h
-                  HINTS ${QWT_PREFIX}/include/qwt
+                  HINTS ${QWT_PREFIX}/include ${QWT_PREFIX}/include/qwt
                   PATHS /usr/include/qt6 /usr/include/qt6/qwt6 /usr/include/qwt
                         /usr/local/include/qwt NO_DEFAULT_PATH)
 
