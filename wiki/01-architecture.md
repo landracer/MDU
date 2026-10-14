@@ -70,6 +70,8 @@ signals:
 - `RAtTraxBMS` — rAtTrax-BMS CSV and binary protocols
 - `OpenDashBridge` — ESP-NOW USB bridge (DP: line format)
 - `MDLoggerCSV` — CSV file import with playback controls
+- `SessionLog` (pure, headless) — binary `.mdsn` session recording/replay; MainWindow mirrors
+  every store update into the active recording and replays files back through the same store
 
 ### 2. UnifiedDataStore
 
@@ -156,6 +158,20 @@ Main application window with:
 - Status bar showing connection states and warnings
 - Integration with DashboardWidget and RealtimePlot
 - Command-line argument parsing for hardware ports
+
+## Session Recording & Replay (Pillar 4)
+
+Live data and replays share ONE session model: every sample that reaches
+`UnifiedDataStore` is mirrored into the active `SessionLog` writer (record), and a replayed
+`.mdsn` file is fed back into the same store (replay) so the dashboard/tables behave
+identically in live and replay modes.
+
+File layout (dense little-endian binary): fixed header (magic `MDSN`, version, start time,
+block capacity) → sample blocks (`MSBK`: block t0 + count, then fixed 20-byte records
+`relUs|dpId|value`) → timestamp index (sorted `(t0RelUs, fileOffset)` pairs — seek without
+scanning) → fixed footer (`MSEN`, counts, index offset). Magic/version checks plus exact
+count/offset validation mean a truncated or corrupt file is *rejected*, never half-parsed.
+Export converts any `.mdsn` to CSV/JSON carrying each DP's registry name and unit.
 
 ## Data Flow
 
@@ -246,7 +262,7 @@ When Qwt is unavailable, RealtimePlot falls back to a simple value display widge
 
 ## Testing
 
-20 test groups / 49 assertions (run with `--unit-test`, wired into CTest) covering:
+22 test groups / 55 assertions (run with `--unit-test`, wired into CTest) covering:
 - DataStore set/get operations
 - Data point validity tracking
 - Timestamp management

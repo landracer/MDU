@@ -18,6 +18,8 @@
 #include <QMessageBox>
 #include <QApplication>
 #include <QScreen>
+#include <QDir>
+#include <QFile>
 
 // ============================================================================
 // Includes for BoostConfigDialog and GearSettingsDialog
@@ -336,6 +338,23 @@ void MainWindow::openCsvFile(const QString& filePath) {
     }
 }
 
+void MainWindow::openSessionFile(const QString& filePath) {
+    SessionFile f;
+    QString err;
+    if (!SessionLog::read(filePath, &f, &err)) {
+        qWarning() << "[MainWindow] Session read failed:" << err;
+        statusBar()->showMessage("Failed to open session: " + err, 5000);
+        return;
+    }
+    // Unified session model: replay feeds the same store the live sources feed.
+    // The store re-emits dataPointUpdated → onDataPointUpdated → dashboard.
+    for (const SessionSample& s : std::as_const(f.samples))
+        UnifiedDataStore::instance().setDataPoint(s.id, s.value, QStringLiteral("SESSION"));
+    statusBar()->showMessage(QString("Session replayed: %1 samples from %2")
+                                 .arg(f.samples.size())
+                                 .arg(f.startTime.toString(Qt::ISODate)), 5000);
+}
+
 void MainWindow::startTestMode() {
     if (m_testTimer) {
         delete m_testTimer;
@@ -349,10 +368,13 @@ void MainWindow::startTestMode() {
 }
 
 void MainWindow::onDataPointUpdated(DataPointID id, double value, const QString& source) {
+    Q_UNUSED(source);
     // Update dashboard with the new value
     if (m_dashboard) {
         m_dashboard->updateValue(id, value, QDateTime::currentDateTime());
     }
+    // Mirror into the active session recording (no-op unless recording)
+    m_session.append(id, value, QDateTime::currentDateTimeUtc());
 }
 
 void MainWindow::updateStatusBar() {
@@ -448,7 +470,66 @@ void MainWindow::setupMenuBar() {
     openCsvAction->setStatusTip("Open an MDLogger CSV file for playback");
     connect(openCsvAction, &QAction::triggered, this, &MainWindow::onOpenCsvFile);
     fileMenu->addAction(openCsvAction);
-    
+
+    QAction* openSessionAction = new QAction("Open Session Log...", this);
+    openSessionAction->setStatusTip("Replay a recorded .mdsn session file");
+    connect(openSessionAction, &QAction::triggered, this, [this]() {
+        const QString path = QFileDialog::getOpenFileName(
+            this, "Open Session Log", QString(),
+            "MDU Session (*.mdsn);;All Files (*)");
+        if (!path.isEmpty()) openSessionFile(path);
+    });
+    fileMenu->addAction(openSessionAction);
+
+    QAction* exportSessionAction = new QAction("Export Session Log...", this);
+    exportSessionAction->setStatusTip("Convert a .mdsn session to CSV/JSON with unit metadata");
+    connect(exportSessionAction, &QAction::triggered, this, [this]() {
+        const QString src = QFileDialog::getOpenFileName(
+            this, "Export Session Log", QString(), "MDU Session (*.mdsn);;All Files (*)");
+        if (src.isEmpty()) return;
+        SessionFile f;
+        QString err;
+        if (!SessionLog::read(src, &f, &err)) {
+            statusBar()->showMessage("Failed to open session: " + err, 5000);
+            return;
+        }
+        QString dst = QFileDialog::getSaveFileName(
+            this, "Export To...", QString(), "CSV (*.csv);;JSON (*.json)");
+        if (dst.isEmpty()) return;
+        const QString content = dst.endsWith(QStringLiteral(".json"))
+                                    ? QString::fromUtf8(SessionLog::toJson(f))
+                                    : SessionLog::toCsv(f);
+        QFile out(dst);
+        const bool ok = out.open(QIODevice::WriteOnly | QIODevice::Truncate)
+                        && out.write(content.toUtf8()) == content.toUtf8().size();
+        out.close();
+        statusBar()->showMessage(ok ? "Exported " + dst : "Export failed", 5000);
+    });
+    fileMenu->addAction(exportSessionAction);
+
+    QAction* recordAction = new QAction("\u25cf Record Session", this);
+    recordAction->setCheckable(true);
+    recordAction->setStatusTip("Record every incoming data point to a binary .mdsn session log");
+    connect(recordAction, &QAction::toggled, this, [this, recordAction](bool on) {
+        if (on) {
+            const QString path = QFileDialog::getSaveFileName(
+                this, "Record Session", QDir::homePath() + QStringLiteral("/mdu-session.mdsn"),
+                "MDU Session (*.mdsn)");
+            if (path.isEmpty() || !m_session.create(path)) {
+                recordAction->setChecked(false);
+                if (!path.isEmpty()) statusBar()->showMessage("Could not create session file", 5000);
+                return;
+            }
+            statusBar()->showMessage("Recording session \u2192 " + path);
+        } else {
+            const qint64 n = m_session.recordedCount();
+            m_session.finalize();
+            statusBar()->showMessage(
+                QStringLiteral("Session saved (%1 samples)").arg(n), 5000);
+        }
+    });
+    fileMenu->addAction(recordAction);
+
     fileMenu->addSeparator();
     
     QAction* closeAction = new QAction("Close Connection", this);

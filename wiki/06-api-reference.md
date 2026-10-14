@@ -494,7 +494,7 @@ public:
     explicit TestHarness(QObject* parent = nullptr);
 
     bool runAllTests();
-        // Run all test groups (43 assertions) and return pass/fail
+        // Run all test groups (22 groups / 55 assertions) and return pass/fail
 
 private slots:
     void testSingleton();
@@ -549,6 +549,48 @@ public:
 Digifant NTC/voltage lookup curves (`DigifantMap`) are ported verbatim from the ancestor app.
 
 ---
+
+## SessionLog (session recording & replay)
+
+### Header
+```cpp
+#include "SessionLog.h"
+```
+
+### Data types
+
+```cpp
+struct SessionSample { DataPointID id; double value; qint64 relUs; };  // us since start
+struct SessionFile   { QDateTime startTime; quint32 blockCapacity;
+                       QVector<SessionSample> samples; QList<BlockMeta> index; };
+```
+
+### Class Definition
+
+```cpp
+class SessionLog {
+public:
+    // recording
+    bool create(const QString& path, const QDateTime& start = QDateTime::currentDateTimeUtc(),
+                quint32 blockCapacity = 256);
+    bool append(DataPointID id, double value, const QDateTime& ts);  // buffered, auto-flush
+    bool flush();
+    bool finalize();                    // write remaining + footer/index, close
+    bool isRecording() const;  qint64 recordedCount() const;
+    // replay
+    static bool read(const QString& path, SessionFile* out, QString* error = nullptr);
+    static QVector<SessionSample> slice(const SessionFile&, qint64 fromRelUs, qint64 toRelUs);
+    // export with unit metadata
+    static QString toCsv(const SessionFile&);
+    static QByteArray toJson(const SessionFile&);
+};
+```
+
+**Wire format** (little-endian): `MDSN` header (version, start, block capacity) -> repeated
+`MSBK` blocks (t0 + count + fixed 20-byte records) -> sorted `(t0RelUs, offset)` timestamp
+index -> `MSEN` footer (counts + index offset). Every structure is validated on read; corrupt
+or truncated files are rejected. Live path: `MainWindow::onDataPointUpdated` -> `append()`;
+replay: `MainWindow::openSessionFile` / `--session` feeds `setDataPoint` in order.
 
 ## Signal/Slot Architecture
 

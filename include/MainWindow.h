@@ -20,6 +20,7 @@
 #include "LayoutEditor.h"
 #include "BoostConfigDialog.h"
 #include "GearSettingsDialog.h"
+#include "SessionLog.h"
 
 /**
  * @brief Main application window
@@ -68,6 +69,11 @@ public:
      * @brief Open MDLogger CSV file for import
      */
     void openCsvFile(const QString& filePath);
+
+    /**
+     * @brief Replay a binary session log (.mdsn) into the data store
+     */
+    void openSessionFile(const QString& filePath);
 
     /**
      * @brief Start test mode with simulated data
@@ -135,6 +141,9 @@ private:
     RAtTraxBMS* m_bms;
     OpenDashBridge* m_bridge;
     MDLoggerCSV* m_csvParser;
+
+    // Session recording (Pillar 4) — live writer while recording, idle otherwise
+    SessionLog m_session;
 
     // UI components
     DashboardWidget* m_dashboard;

@@ -30,7 +30,7 @@
 - ✅ 4 parsers; MD-ECU framing corrected (TAG = frame length; ETX checked at position)
 - ✅ RealtimePlot (Qwt 6.3-Qt6), clickable legend, markers, pause/review, Show-All
 - ✅ LiveDataTable, UnitConverter, Settings persistence
-- ✅ 20 test groups / 49 assertions — all passing (`--unit-test`, also `ctest --test-dir build`)
+- ✅ 22 test groups / 55 assertions — all passing (`--unit-test`, also `ctest --test-dir build`)
 - ✅ PlotEngine/PlotDataModel split: decimated rendering + XY-mode (plot any DP vs any DP)
 - ✅ Digifant block + VDO + knock mapped (raw where uncalibrated); golden-fixture + fuzz decoder tests
 - ⏳ Bench verification: boost absolute-vs-gauge semantics, EGT/enrichment raw scales

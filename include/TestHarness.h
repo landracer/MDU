@@ -64,6 +64,9 @@ private slots:
     // Dashboard routing tests (category auto-add, seeded series)
     void testDashboardRouting();
 
+    // Session log tests (binary format, index, export)
+    void testSessionRoundTrip();
+
 private:
     int m_testsRun = 0;
     int m_testsPassed = 0;

@@ -2,6 +2,20 @@
 
 All notable changes. Dates are project milestones, not commit dates.
 
+## v0.5.0 — Pillar 4: session recording & replay (October 2026)
+
+- **`SessionLog` binary session format (`.mdsn`)**: header → fixed-record sample blocks →
+  timestamp index (sorted `t0RelUs → offset`) → footer; corrupt/truncated files are
+  *rejected*, never silently truncated; fully headless/unit-tested
+- **Record live data**: File → "Record Session" mirrors every store update into the file;
+  stop finalizes the index. **Replay**: File → "Open Session Log" or `--session file.mdsn`
+  feeds samples through the same `UnifiedDataStore` → dashboard path as live sources
+  (unified session model — one store, live or replay)
+- **Export**: any `.mdsn` → CSV or JSON via File → "Export Session Log", carrying each
+  DP's registry name and unit as metadata
+- Suite: 22 groups / 55 assertions (round-trip exactness, index/slice, truncation
+  rejection, export metadata)
+
 ## v0.4.0 — graphing discoverability & manual series control (October 2026)
 
 - **Repo live at github.com/landracer/MDU** (`master` = default branch); GitHub

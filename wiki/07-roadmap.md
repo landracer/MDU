@@ -32,7 +32,7 @@ pause/review and markers shipped in v0.2.0. Remaining phases below; the master g
 
 ### ✅ Utilities & Testing
 - [x] Utilities.h/.cpp — Endianness, checksums, angle conversions
-- [x] TestHarness — 13 test groups / 34 assertions (all passing)
+- [x] TestHarness — 22 test groups / 55 assertions (all passing)
 - [x] DataPointID enum with helper functions (name, unit, category)
 
 ### ✅ Build System

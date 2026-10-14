@@ -76,9 +76,10 @@ functional yet and is tracked as a roadmap item.
 ./multidisplay-unified --bms /dev/ttyUSB1         # rAtTrax-BMS USB CDC
 ./multidisplay-unified --bridge /dev/ttyUSB2      # openDstream ESP-NOW bridge (921600)
 ./multidisplay-unified --csv MD0001.CSV           # MDLogger CSV replay
+./multidisplay-unified --session session.mdsn     # replay a recorded binary session
 ./multidisplay-unified --md-ecu /dev/ttyUSB0 --bms /dev/ttyUSB1 --bridge /dev/ttyUSB2 --csv x.CSV  # all at once
 ./multidisplay-unified --test                     # simulated data @30Hz (no hardware needed)
-./multidisplay-unified --unit-test                # run the 34-assertion test suite and exit
+./multidisplay-unified --unit-test                # run the 55-assertion test suite and exit
 ```
 
 | Option | Description |
@@ -87,6 +88,7 @@ functional yet and is tracked as a roadmap item.
 | `--bms, -b <port>` | rAtTrax-BMS serial port |
 | `--bridge, -g <port>` | ESP-NOW bridge (openDstream) serial port @ 921600 |
 | `--csv, -c <file>` | MDLogger CSV file to replay (timestamp-paced, speed multiplier, pause/resume) |
+| `--session, -s <file>` | Recorded `.mdsn` session log to replay into the dashboard |
 | `--test` | Simulated data for all systems at 30Hz |
 | `--unit-test` | Run unit tests and exit |
 | `--help, -h` / `--version` | Standard options (version from CMake `project VERSION`) |
@@ -119,11 +121,13 @@ grade roadmap live in [`A-class.md`](A-class.md).
 - ✅ Thread-safe `UnifiedDataStore` (~30Hz, `QReadWriteLock`)
 - ✅ 4 hardware parsers (MD-ECU framing now matches the ancestor firmware contract)
 - ✅ Qwt real-time plots, clickable legends, markers, review mode
-- ✅ 20 unit-test groups / 49 assertions, all passing (`--unit-test`, wired into CTest; CI on ubuntu)
+- ✅ 22 unit-test groups / 55 assertions, all passing (`--unit-test`, wired into CTest; CI on ubuntu)
 - ✅ Engine-agnostic plotting: `PlotEngine` interface + pure `PlotDataModel` (ring buffers,
   min/max decimation, XY-mode pairing); X-axis selector plots any DP against any DP
 - ✅ MD-ECU Digifant/VDO/knock payload fully mapped (raw counts where uncalibrated)
-- 🔲 Session save/load/replay, export, Android, OTA — see A-class.md
+- ✅ Session recording & replay: binary timestamp-indexed `.mdsn` logs, replay into the same
+  store as live sources, export to CSV/JSON with per-DP name/unit metadata
+- 🔲 Android, OTA, per-vehicle profiles — see A-class.md
 
 ## Contributing
 

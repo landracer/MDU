@@ -28,8 +28,9 @@ and extend — correct parsers, deterministic tests, professional visualization,
       multidisplay-unified --unit-test)` with `PASS_REGULAR_EXPRESSION "ALL TESTS PASSED"`.
       (Per-test QTest data tables remain an optional upgrade, not a blocker.)
 - [x] CTest integration: `ctest --output-on-failure` runs the suite (offscreen Qt)
-- [x] CI: GitHub Actions (ubuntu-24.04 + apt Qt6/Qwt) — configure, build, ctest.
-      Windows matrix entry pending agreed MSVC/CIQt pinning (Pillar 6)
+- [x] CI: GitHub Actions on ubuntu-24.04 — apt Qt6 + **Qwt 6.3.0 built from source**
+      (Ubuntu Noble ships no Qt6-Qwt package) — configure, build, ctest, scoped to master
+- [ ] Windows matrix entry pending agreed MSVC/CIQt pinning (still needs your decision)
 - [x] Decoder fuzz/robustness: seeded 50k random-byte fuzz must not crash or wedge the state
       machine; golden frame still decodes exactly afterwards
 
@@ -57,11 +58,18 @@ never ImGui.
 - [x] XY-mode: toolbar X-axis selector plots any DP against any DP (RPM vs boost, EGT vs
       lambda), not just vs time; pairing + interpolation live in unit-tested PlotDataModel
 
-## Pillar 4 — Session recording & replay (the telemetry product core)
+## Pillar 4 — Session recording & replay (done Oct 2026 — the telemetry product core)
 
-- [ ] Binary session log (framing-preserving + DP-keyed store dump), indexed by timestamp
-- [ ] Replay UI (already have CSV import; unify on one session model)
-- [ ] Export: CSV/JSON with unit metadata; report images via cxxplot/matplot++
+- [x] Binary session log (`SessionLog`, `.mdsn`): framing-preserving fixed-record blocks,
+      footer timestamp index (`t0RelUs → offset`) for seekable replay; corrupt/truncated
+      files rejected outright, never half-parsed; round-trip + truncation fuzz-tested
+- [x] Replay UI unified on one session model: replay feeds the same `UnifiedDataStore`
+      signal path as live sources (`--session file.mdsn`, File menu); CSV import remains a
+      source into the same store
+- [x] Export: CSV/JSON with per-DP name + unit metadata from the registry
+- [ ] Report images via cxxplot/matplot++ (deferred — export covers data portability)
+- [ ] Time-paced live playback of recordings (current replay dumps full state instantly,
+      like CSV import); scrubbing UI is a follow-on
 
 ## Pillar 5 — Productization
 
@@ -77,13 +85,13 @@ never ImGui.
 - [x] CHANGELOG.md / CONTRIBUTING.md; per-file license headers on all 43 sources
 - [x] Session notes moved to docs/archive/ with superseded banners; stray PNG deleted
 - [x] Version single-sourced to CMake; qDebug console handler (Qt >= 6.8 journald trap)
-- [ ] GitHub private repo remote + Actions CI (pillar 2)
+- [x] GitHub private repo remote (landracer/MDU) + Actions CI green (pillar 2)
 
 ---
 
 ## Definition of done (v1.0)
 
 1. Every wire byte is explained: each frame field maps to a DP or a documented gap
-2. Every parser has a fixture test; `--unit-test` green in CI on two platforms
+2. Every parser has a fixture test; `--unit-test` green in CI on two platforms (ubuntu green; Windows pending pinning)
 3. Plots stay smooth at 8h/30Hz/50-series sessions with full review scrubbing
 4. A new user can connect hardware and see correct curves in < 5 minutes

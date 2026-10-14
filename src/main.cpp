@@ -72,6 +72,10 @@ int main(int argc, char* argv[]) {
         "MDLogger CSV file to import (e.g., MD0001.CSV)", "file");
     parser.addOption(csvOption);
     
+    QCommandLineOption sessionOption(QStringList() << "s" << "session",
+        "Replay a binary session log (.mdsn) into the dashboard", "file");
+    parser.addOption(sessionOption);
+    
     QCommandLineOption testOption("test",
         "Run in test mode with simulated data");
     parser.addOption(testOption);
@@ -122,6 +126,12 @@ int main(int argc, char* argv[]) {
         QString filePath = parser.value(csvOption);
         qDebug() << "[Main] Opening MDLogger CSV:" << filePath;
         mainWindow.openCsvFile(filePath);
+    }
+    
+    if (parser.isSet(sessionOption)) {
+        QString filePath = parser.value(sessionOption);
+        qDebug() << "[Main] Replaying session log:" << filePath;
+        mainWindow.openSessionFile(filePath);
     }
     
     if (parser.isSet(testOption)) {

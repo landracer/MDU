@@ -4,9 +4,15 @@
 #include "MdFrameDecoder.h"
 #include "PlotDataModel.h"
 #include "DashboardWidget.h"
+#include "SessionLog.h"
 #include <QRandomGenerator>
 #include <QDebug>
 #include <QDateTime>
+#include <QDir>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 #include <QTimer>
 #include <QThread>
 // QtConcurrent removed - not available in minimal Qt6 builds
@@ -61,6 +67,9 @@ bool TestHarness::runAllTests() {
 
     // Dashboard routing tests
     testDashboardRouting();
+
+    // Session log tests
+    testSessionRoundTrip();
     
     qDebug() << "========================================";
     qDebug() << "  Results: " << m_testsPassed << "/" << m_testsRun << " passed";
@@ -634,6 +643,54 @@ void TestHarness::testDashboardRouting()
     if (bms) bms->clear();
     report("testDashboard_clearKeepsSeries", bms && bms->hasSeries(DataPointID::BMSSOC),
            "clear() empties samples without dropping the series");
+}
+
+void TestHarness::testSessionRoundTrip()
+{
+    const QString path = QDir::tempPath() + QStringLiteral("/mdu_session_test.mdsn");
+    QFile::remove(path);
+    const QDateTime t0 = QDateTime::currentDateTimeUtc();
+
+    SessionLog w;
+    const bool created = w.create(path, t0, 2);
+    w.append(DataPointID::RPM, 1000.0, t0.addMSecs(0));
+    w.append(DataPointID::BoostPressure, 101.5, t0.addMSecs(33));
+    w.append(DataPointID::RPM, 2000.0, t0.addMSecs(66));
+    const bool fin = w.finalize();
+
+    SessionFile f;
+    QString err;
+    const bool rok = SessionLog::read(path, &f, &err);
+    const auto s0 = SessionLog::slice(f, 30000, 999999);
+    const bool roundtrip = created && fin && rok
+        && f.samples.size() == 3 && f.index.size() == 2
+        && f.samples[0].id == DataPointID::RPM && f.samples[0].value == 1000.0
+        && f.samples[1].id == DataPointID::BoostPressure && f.samples[1].relUs == 33000
+        && f.samples[2].value == 2000.0
+        && s0.size() == 2 && s0.first().id == DataPointID::BoostPressure;
+    report("testSession_roundTrip", roundtrip,
+           "write\u2192read exact values; timestamp index; slice seeks by time");
+
+    // A truncated file must be rejected, never silently truncated
+    QByteArray all;
+    { QFile src(path); if (src.open(QIODevice::ReadOnly)) all = src.readAll(); }
+    const QString cut = path + QStringLiteral(".cut");
+    QFile cf(cut);
+    if (cf.open(QIODevice::WriteOnly | QIODevice::Truncate))
+        cf.write(all.left(all.size() - 6));
+    cf.close();
+    SessionFile bad;
+    QString e2;
+    const bool rejected = !SessionLog::read(cut, &bad, &e2);
+    QFile::remove(cut);
+    QFile::remove(path);
+    report("testSession_truncated", rejected, "truncated session file rejected");
+
+    const QString csv = SessionLog::toCsv(f);
+    const QJsonDocument jd = QJsonDocument::fromJson(SessionLog::toJson(f));
+    report("testSession_export", csv.contains(QStringLiteral("Engine RPM"))
+             && jd.isObject() && jd.object().value(QStringLiteral("samples")).toArray().size() == 3,
+           "CSV carries DP name/unit metadata; JSON parses with all samples");
 }
 
 /* Licensed under Sovereign Individual License v1.0 — see LICENSE file */
