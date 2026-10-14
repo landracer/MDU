@@ -131,7 +131,7 @@ jobs:
           set -euo pipefail
           python3 -m venv "$RUNNER_TEMP/venv"
           "$RUNNER_TEMP/venv/bin/pip" install --upgrade pip aqtinstall
-          "$RUNNER_TEMP/venv/bin/aqt" install-qt macos desktop ${{ env.QT_VERSION }} clang_arm64 -O "$RUNNER_TEMP/qt"
+          "$RUNNER_TEMP/venv/bin/aqt" install-qt mac desktop ${{ env.QT_VERSION }} clang_arm64 -O "$RUNNER_TEMP/qt"
           echo "$RUNNER_TEMP/qt/${{ env.QT_VERSION }}/clang_arm64/bin" >> "$GITHUB_PATH"
 
       - name: Build Qwt ${{ env.QWT_VERSION }} from source (Qt6)
