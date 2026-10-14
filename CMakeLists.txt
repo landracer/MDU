@@ -71,10 +71,13 @@ if(ENABLE_QWT)
     else()
         # Direct library path for Qwt 6.3 installed without CMake config
         find_library(QWT_LIBRARY NAMES qwt-qt6 Qwt PATHS /usr/lib64 /usr/lib /usr/local/lib)
-        if(QWT_LIBRARY)
-            message(STATUS "Qwt found at ${QWT_LIBRARY} - enabling plotting")
+        find_path(QWT_INCLUDE_DIR NAMES qwt_plot.h
+                  PATHS /usr/include/qt6 /usr/include/qt6/qwt6 /usr/include/qwt
+                        /usr/local/include/qwt NO_DEFAULT_PATH)
+        if(QWT_LIBRARY AND QWT_INCLUDE_DIR)
+            message(STATUS "Qwt found at ${QWT_LIBRARY} (headers: ${QWT_INCLUDE_DIR}) - enabling plotting")
             target_link_libraries(${PROJECT_NAME} PRIVATE ${QWT_LIBRARY})
-            target_include_directories(${PROJECT_NAME} PRIVATE /usr/include/qt6)
+            target_include_directories(${PROJECT_NAME} PRIVATE ${QWT_INCLUDE_DIR})
             target_compile_definitions(${PROJECT_NAME} PRIVATE ENABLE_QWT_PLOTTING)
             set(QWT_FOUND TRUE)
         else()
