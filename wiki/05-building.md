@@ -149,9 +149,17 @@ Qwt is **optional** — the application builds and runs without it. This is usef
 
 ### Installing Qwt on Linux
 
+> ⚠️ Debian/Ubuntu do **not** package a Qt6 build of Qwt (only the Qt5-based
+> `libqwt-qt5-dev`). On Ubuntu the pinned-Qwt path is what CI does: build
+> Qwt 6.3 from source (see below). openSUSE/Fedora/Arch ship Qt6-flavored
+> Qwt packages directly.
+
 ```bash
-# Ubuntu/Debian
-sudo apt install libqwt-dev
+# openSUSE (Qt6)
+sudo zypper in libqwt-qt6-6_3-devel   # or distro equivalent
+
+# Ubuntu/Debian — Qt5-only packages available:
+sudo apt install libqwt-qt5-dev        # Qt5 ABI — do NOT mix with a Qt6 app
 
 # Fedora
 sudo dnf install qwt-devel
@@ -161,7 +169,16 @@ sudo pacman -S qwt-qt6
 
 # macOS (Homebrew)
 brew install qwt
+
+# Anywhere (the CI-authoritative method, Qt6):
+wget https://downloads.sourceforge.net/project/qwt/files/qwt/6.3.0/qwt-6.3.0.tar.bz2
+tar xf qwt-6.3.0.tar.bz2 && cd qwt-6.3.0
+qmake6 PREFIX=/usr/local && make -j$(nproc) && sudo make install && sudo ldconfig
 ```
+
+CMake locates Qwt either via its CMake config or by probing
+`find_library(qwt-qt6)` + `find_path(qwt_plot.h)` across the common include
+layouts (`/usr/include/qt6`, `/usr/local/include/qwt`, …).
 
 ### Building with Qwt
 

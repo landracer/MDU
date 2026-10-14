@@ -32,7 +32,7 @@ jobs:
       - name: Build Qwt ${{ env.QWT_VERSION }} from source (Qt6)
         run: |
           set -euo pipefail
-          wget -q "https://downloads.sourceforge.net/project/qwt/files/qwt/${{ env.QWT_VERSION }}/qwt-${{ env.QWT_VERSION }}.tar.bz2" -O /tmp/qwt.tar.bz2
+          wget -q "https://downloads.sourceforge.net/project/qwt/qwt/${{ env.QWT_VERSION }}/qwt-${{ env.QWT_VERSION }}.tar.bz2" -O /tmp/qwt.tar.bz2
           tar xf /tmp/qwt.tar.bz2 -C /tmp
           cd "/tmp/qwt-${{ env.QWT_VERSION }}"
           qmake6 PREFIX=/usr/local
