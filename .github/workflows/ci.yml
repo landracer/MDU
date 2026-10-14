@@ -89,8 +89,9 @@ jobs:
           powershell -Command "(gc qwtconfig.pri) -replace '(?m)^ *QWT_INSTALL_PREFIX.*=.*','QWT_INSTALL_PREFIX    = $env:GITHUB_WORKSPACE/qwt-install' | Set-Content qwtconfig.pri"
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           qmake src\src.pro
-          nmake /NOLOGO
-          nmake /NOLOGO install
+          :: nmake is serial and far too slow for ~250 TUs; VS ships jom (parallel drop-in)
+          "%VCINSTALLDIR%..\Common7\IDE\jom.exe" /NOLOGO
+          "%VCINSTALLDIR%..\Common7\IDE\jom.exe" /NOLOGO install
 
       - name: Configure
         shell: cmd
