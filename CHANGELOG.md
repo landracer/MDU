@@ -4,6 +4,9 @@ All notable changes. Dates are project milestones, not commit dates.
 
 ## v0.4.0 — graphing discoverability & manual series control (October 2026)
 
+- **Repo live at github.com/landracer/MDU** (`master` = default branch); GitHub
+  Actions CI green: ubuntu-24.04 builds Qt6 from apt and **Qwt 6.3.0 pinned &
+  built from source** (Ubuntu ships no Qt6-Qwt package — only `libqwt-qt5-dev`)
 - **Diagnosed "dashboard shows nothing"**: plotting was never broken — series
   auto-route to the tab of their *category* (BMS → BMS tab, VESC → VESC tab…),
   so a tab whose source isn't connected (e.g. "Visualization" without the
