@@ -64,6 +64,7 @@ jobs:
 
   windows:
     runs-on: windows-2022
+    timeout-minutes: 45
     env:
       QT_QPA_PLATFORM: offscreen
     steps:
@@ -85,7 +86,7 @@ jobs:
           tar -xjf "%RUNNER_TEMP%\qwt.tar.bz2" -C "%RUNNER_TEMP%"
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           cd "%RUNNER_TEMP%\qwt-${{ env.QWT_VERSION }}"
-          qmake qwt.pro
+          qmake src\src.pro
           nmake /NOLOGO
           nmake /NOLOGO install INSTALLPATH="%GITHUB_WORKSPACE%\qwt-install"
 
@@ -119,6 +120,7 @@ jobs:
 
   macos:
     runs-on: macos-14
+    timeout-minutes: 45
     env:
       QT_QPA_PLATFORM: offscreen
     steps:
@@ -138,7 +140,7 @@ jobs:
           curl -sSfL "https://downloads.sourceforge.net/project/qwt/qwt/${{ env.QWT_VERSION }}/qwt-${{ env.QWT_VERSION }}.tar.bz2" -o /tmp/qwt.tar.bz2
           tar xjf /tmp/qwt.tar.bz2 -C /tmp
           cd "/tmp/qwt-${{ env.QWT_VERSION }}"
-          qmake qwt.pro
+          qmake src/src.pro
           make -j"$(sysctl -n hw.ncpu)" install INSTALLPATH="$GITHUB_WORKSPACE/qwt-install"
 
       - name: Configure
