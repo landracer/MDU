@@ -4,7 +4,7 @@ All notable changes. Dates are project milestones, not commit dates.
 
 ## v0.5.1 — every-platform builds (October 2026)
 
-- **Windows + macOS CI added** alongside linux: Qt 6.8.2 (LTS, cached installer action),
+- **Windows + macOS CI added** alongside linux: Qt 6.8.2 (LTS, aqtinstall (AnotherQtInstaller)),
   MSVC (vcvars + nmake) on windows-2022, clang/make on macos-14; Qwt 6.3 source-built on
   both; per-platform artifacts uploaded every run (windeployqt zip / dmg / tar.gz) so
   Windows/Apple beta testers can self-serve. `QWT_PREFIX` CMake hint for source-built Qwt

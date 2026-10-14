@@ -31,7 +31,7 @@ and extend — correct parsers, deterministic tests, professional visualization,
 - [x] CI: GitHub Actions on ubuntu-24.04 — apt Qt6 + **Qwt 6.3.0 built from source**
       (Ubuntu Noble ships no Qt6-Qwt package) — configure, build, ctest, scoped to master
 - [x] Windows + macOS CI: owner doesn't run Windows/Apple, so this uses the ecosystem-
-      standard setup (MSVC + `winterqt/setup-qt-action` Qt 6.8.2 + windeployqt zip; clang/make
+      standard setup (MSVC + `aqtinstall` Qt 6.8.2 + windeployqt zip; clang/make
       + macdeployqt dmg; Qwt 6.3 source-built there too) so any beta tester on those platforms
       can grab the CI artifact; these jobs are community-iterated, not owner-maintained
 - [x] Decoder fuzz/robustness: seeded 50k random-byte fuzz must not crash or wedge the state

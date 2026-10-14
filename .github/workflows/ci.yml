@@ -2,12 +2,11 @@
 #
 # - linux: authoritative job. apt Qt6; Ubuntu 24.04 ships no Qt6 Qwt package,
 #   so Qwt 6.3 is pinned and built from source against the runner's Qt6.
-# - windows / macos: ecosystem-standard setup — Qt 6.8 LTS from the cached
-#   winterpt installer action, MSVC (cl + nmake) on Windows, clang/make on
+# - windows / macos: ecosystem-standard setup — Qt 6.8 LTS via aqtinstall
+#   (AnotherQtInstaller, pip), MSVC (vcvars + nmake) on Windows, clang/make on
 #   macOS; Qwt 6.3 is likewise built from source against the pinned Qt.
-#   These jobs exist so beta testers on those platforms get installable,
-#   self-contained build artifacts (zip / dmg). Artifacts are uploaded from
-#   every job.
+#   These jobs exist so beta testers on those platforms get self-contained
+#   build artifacts (zip / dmg); they are community-iterated, not owner-maintained.
 name: CI
 
 on:
@@ -70,9 +69,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: winterpt/setup-qt-action@v4
-        with:
-          version: ${{ env.QT_VERSION }}   # win64 msvc2022_64, cached archive
+      - name: Install Qt ${{ env.QT_VERSION }} (aqtinstall)
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade aqtinstall
+          python -m aqt install-qt windows desktop ${{ env.QT_VERSION }} win64_msvc2022_64 -O "$env:RUNNER_TEMP\qt"
+          $qt = "$env:RUNNER_TEMP\qt\${{ env.QT_VERSION }}\win64_msvc2022_64"
+          "QTDIR=$qt" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "$qt\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Build Qwt ${{ env.QWT_VERSION }} from source (MSVC)
         shell: cmd
@@ -104,8 +108,8 @@ jobs:
         shell: cmd
         run: |
           windeployqt --release --no-translations build\multidisplay-unified.exe
-          xcopy /y /q "%GITHUB_WORKSPACE%\qwt-install\bin\qwt-qt6.dll" build\ 2>nul || echo "qwt dll has different name; windeployqt dir listing:" && dir /b build\*.dll
-          dir /b build\*.dll
+          copy /y "%GITHUB_WORKSPACE%\qwt-install\bin\*.dll" build\ >nul
+          dir /b build\*.exe build\*.dll
           powershell -Command "Compress-Archive -Path build\* -DestinationPath mdu-windows-x64.zip"
 
       - uses: actions/upload-artifact@v4
@@ -120,9 +124,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: winterpt/setup-qt-action@v4
-        with:
-          version: ${{ env.QT_VERSION }}   # clang_64 universal build
+      - name: Install Qt ${{ env.QT_VERSION }} (aqtinstall)
+        run: |
+          set -euo pipefail
+          python3 -m pip install --upgrade aqtinstall
+          python3 -m aqt install-qt macos desktop ${{ env.QT_VERSION }} clang_arm64 -O "$RUNNER_TEMP/qt"
+          echo "$RUNNER_TEMP/qt/${{ env.QT_VERSION }}/clang_arm64/bin" >> "$GITHUB_PATH"
 
       - name: Build Qwt ${{ env.QWT_VERSION }} from source (Qt6)
         run: |
@@ -146,10 +153,17 @@ jobs:
         run: |
           set -euo pipefail
           APP=build/multidisplay-unified.app
-          [ -d "$APP" ] && macdeployqt "$APP" || echo "no .app bundle (console build), packaging bare binary"
-          mkdir -p mdu-macos/pkg && cp -a build/multidisplay-unified* mdu-macos/pkg/ 2>/dev/null || true
-          [ -d mdu-macos/pkg/multidisplay-unified.app ] && cp -a qwt-install/lib/*.dylib mdu-macos/pkg/multidisplay-unified.app/Contents/MacOS/ || cp -a qwt-install/lib/*.dylib mdu-macos/pkg/ || true
-          hdiutil create -srcfolder mdu-macos/pkg -volname MDU -ov mdu-macos.dmg
+          if [ -d "$APP" ]; then
+            macdeployqt "$APP"
+            cp -a "$GITHUB_WORKSPACE"/qwt-install/lib/libqwt*.dylib* "$APP/Contents/Frameworks/" 2>/dev/null || true
+            hdiutil create -srcfolder "$APP" -volname MDU -ov mdu-macos.dmg
+          else
+            echo "no .app bundle — packaging bare binary + qwt dylib"
+            mkdir -p mdu-macos/pkg
+            cp -a build/multidisplay-unified mdu-macos/pkg/
+            cp -a "$GITHUB_WORKSPACE"/qwt-install/lib/libqwt*.dylib mdu-macos/pkg/
+            hdiutil create -srcfolder mdu-macos/pkg -volname MDU -ov mdu-macos.dmg
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
