@@ -147,9 +147,12 @@ plotted on *another* tab — switch tabs, or use the toolbar:
   currently visible tab (seeded with its latest stored value) and future
   updates route there too
 - **X axis:** combo — plot every series against any other DP (XY-mode)
-- **⏸ Pause / Review** — freeze axes, wheel-zoom / middle-drag pan (data keeps
-  recording); **▶ Resume Live** snaps back with nothing lost
-- **↔ Show All** — compact the whole session into view
+- **⏸ Pause / Review** — freeze whatever you are zoomed into; **▶ Resume Live**
+  snaps back to the scrolling window with nothing lost
+- **↔ Show All** — compact the whole session into view (stays live)
+- **Wheel-zoom / middle-drag pan — always available**: zooming while live *pins*
+  the view to that subsection of the (long) log and auto-follow stops; any explicit
+  view command (Show All toggle, Resume Live, window/X-axis change) releases the pin
 
 ### 6. MainWindow
 

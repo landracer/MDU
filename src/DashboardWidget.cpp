@@ -37,19 +37,23 @@ void DashboardWidget::setupUI() {
     QHBoxLayout* toolbar = new QHBoxLayout();
     toolbar->setSpacing(6);
 
-    QPushButton* pauseButton = new QPushButton("\u23F8 Pause / Review", this);
+    QPushButton* pauseButton = new QPushButton("⏸ Pause / Review", this);
     pauseButton->setCheckable(true);
     pauseButton->setToolTip(
-        "Freeze the plots for review: whole session is compacted into view,\n"
-        "mouse wheel zooms, middle-drag pans. Data keeps recording in the\n"
-        "background \u2014 resume snaps back to live with nothing lost.");
+        "Freeze the plots: whatever you are zoomed into stays frozen.\n"
+        "Mouse wheel zooms and middle-drag pans on every plot at all times;\n"
+        "zooming while live pins the view to that window (auto-follow pauses).\n"
+        "Data keeps recording in the background — Resume Live snaps back with\n"
+        "nothing lost.");
     toolbar->addWidget(pauseButton);
 
-    QPushButton* showAllButton = new QPushButton("\u2194 Show All", this);
+    QPushButton* showAllButton = new QPushButton("↔ Show All", this);
     showAllButton->setCheckable(true);
     showAllButton->setToolTip(
         "Crunch the graph: compact the entire session onto the visible axis\n"
-        "instead of the scrolling time window (stays live).");
+        "instead of the scrolling time window (stays live). Wheel-zoom then\n"
+        "drills into any subsection; the pinned window holds until you toggle\n"
+        "this off or press Resume Live.");
     toolbar->addWidget(showAllButton);
 
     QPushButton* clearMarkersButton = new QPushButton("\u2715 Clear Markers", this);
@@ -75,7 +79,7 @@ void DashboardWidget::setupUI() {
 
     toolbar->addStretch();
 
-    QLabel* hintLabel = new QLabel("Left-click plot: mark point \u00b7 Right-click: remove last mark", this);
+    QLabel* hintLabel = new QLabel("Wheel: zoom (pins view) · Middle-drag: pan · Left-click plot: mark point · Right-click: remove last mark", this);
     hintLabel->setStyleSheet("color: #888; font-size: 10px;");
     toolbar->addWidget(hintLabel);
 

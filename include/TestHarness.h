@@ -64,6 +64,9 @@ private slots:
     // Dashboard routing tests (category auto-add, seeded series)
     void testDashboardRouting();
 
+    // rAtTrax-BMS wire-format tests (BMS CSV, VESC kv + contract formats)
+    void testRAtTraxBMSLines();
+
     // Session log tests (binary format, index, export)
     void testSessionRoundTrip();
 

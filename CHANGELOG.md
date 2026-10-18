@@ -2,6 +2,23 @@
 
 All notable changes. Dates are project milestones, not commit dates.
 
+## v0.6.0 — always-on drill-down zoom + live rAtTrax-BMS/VESC wire format (October 2026)
+
+- **Wheel-zoom / middle-drag pan are now available on every plot at all times**
+  (previously zoom only worked while "Pause / Review" was active — so a long
+  "Show All" session could not be drilled into). Zooming while live **pins** the
+  view to the zoomed subsection: axes stop auto-fitting, samples keep rendering
+  inside the pinned window, and data keeps recording. Any explicit view command
+  (Show All toggle, ▶ Resume Live, time-window or X-axis change) releases the pin
+- **`RAtTraxBMS` now parses the live firmware VESC line** — space-separated
+  `VESC: rpm=… motorA=… inV=… mosT=… motT=… rx=…` (the CAN-decoded summary the
+  firmware actually emits; VESC data previously never reached the dashboard).
+  The comma contract format `VESC:,<rpm>,…` stays supported; non-zero fault codes
+  now raise `faultDetected`
+- Bench-verified end-to-end: live BMS (`BMS:packV,packA,temp,stack,soc,min,max,delta,c1..c6`)
+  and VESC streams parse and route to the BMS/VESC tabs; 11 new wire-format
+  assertions — suite now **23 groups / 66 assertions**
+
 ## v0.5.1 — every-platform builds (October 2026)
 
 - **Windows + macOS CI added** alongside linux: Qt 6.8.2 (LTS) via aqtinstall

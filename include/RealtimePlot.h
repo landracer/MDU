@@ -2,7 +2,9 @@
 /**
  * @file RealtimePlot.h
  * @brief Qwt-backed PlotEngine: multiple color-coded series, scrolling time axis,
- *        pause/zoom review mode, click markers, legend customization.
+ *        always-available wheel-zoom / middle-drag pan (zooming while live pins
+ *        the view to the zoomed window until Resume Live), pause/review mode,
+ *        click markers, legend customization.
  *
  * All sample storage and decimation live in the pure PlotDataModel; this class
  * is a render adapter. Non-Qwt builds fall back to a latest-value label display.
@@ -87,6 +89,14 @@ private:
     double m_timeWindow = 30.0;
     bool m_paused = false;
     bool m_showAll = false;
+    // User wheel-zoom/pan pins the view: while pinned the axes are left exactly
+    // where the user left them and only samples inside the pinned window render.
+    // Cleared by any explicit view command (Resume Live, Show All toggle,
+    // time-window change, X-axis switch).
+    bool m_viewPinned = false;
+    // Last auto-applied X interval — the pin detector compares against this.
+    double m_fitLo = 0.0;
+    double m_fitHi = 30.0;
     bool m_dataDirty = false;
     int m_nextColorIdx = 0;
     QTimer* m_refreshTimer = nullptr;

@@ -81,16 +81,17 @@ void RealtimePlot::setTimeWindow(double seconds) {
     m_timeWindow = qMax(1.0, seconds);
     m_dataDirty = true;
 #ifdef ENABLE_QWT_PLOTTING
-    m_plot->replot();
+    m_viewPinned = false;        // explicit view command: resume auto-follow
+    renderPass(true);            // snap the axes back to the new window
 #endif
 }
 
 void RealtimePlot::setPaused(bool paused) {
     m_paused = paused;
 #ifdef ENABLE_QWT_PLOTTING
-    m_panner->setEnabled(paused);
-    m_magnifier->setEnabled(paused);
-    if (paused) renderPass(true);   // freeze: full session into view, axes fitted to it
+    if (!paused) m_viewPinned = false;   // Resume Live: release any pinned zoom
+    m_dataDirty = true;
+    renderPass(true);   // pause: freeze current view; resume: snap back to live
 #endif
     emit pausedChanged(paused);
 }
@@ -98,16 +99,23 @@ void RealtimePlot::setPaused(bool paused) {
 void RealtimePlot::setShowAllHistory(bool showAll) {
     m_showAll = showAll;
     m_dataDirty = true;
+#ifdef ENABLE_QWT_PLOTTING
+    m_viewPinned = false;        // explicit view command: re-fit and auto-follow
+    renderPass(true);
+#endif
 }
 
 void RealtimePlot::setXAxis(DataPointID id) {
     m_model.setXAxis(id);
     m_dataDirty = true;
 #ifdef ENABLE_QWT_PLOTTING
+    m_viewPinned = false;        // mode switch: re-fit both axes
     m_plot->setAxisTitle(QwtPlot::xBottom,
                          id == DataPointID::Invalid ? QStringLiteral("Time (s)")
                                                     : DataPointName(id));
-    m_plot->replot();
+    renderPass(true);
+#else
+    Q_UNUSED(id);
 #endif
 }
 
@@ -133,6 +141,7 @@ void RealtimePlot::clear() {
     m_model.clearData();
 #ifdef ENABLE_QWT_PLOTTING
     for (QwtPlotCurve* c : m_curves) c->setSamples(QVector<QPointF>());
+    m_viewPinned = false;   // fresh session: back to auto-follow
     m_plot->replot();
     if (m_emptyHint) m_emptyHint->show();   // no data to show until it arrives again
 #endif
@@ -194,6 +203,8 @@ void RealtimePlot::setupUi() {
     m_plot->canvas()->setPalette(QPalette(Qt::darkGray));
     m_plot->setAxisScale(QwtPlot::xBottom, 0, m_timeWindow);
     m_plot->setAxisScale(QwtPlot::yLeft, 0, 100);
+    m_fitLo = 0.0;
+    m_fitHi = m_timeWindow;      // matches the just-applied X fit (pin detector base)
     layout->addWidget(m_emptyHint);
     layout->addWidget(m_plot, 1);
 
@@ -220,13 +231,16 @@ void RealtimePlot::setupUi() {
             this, &RealtimePlot::onPickerSelected);
     m_plot->canvas()->installEventFilter(this);
 
-    // Review navigation: middle-drag pan + wheel zoom (enabled while paused)
+    // Review navigation: wheel zoom (magnifier) + middle-drag pan (panner).
+    // Always enabled — zooming while live/Show-All pins the view to the zoomed
+    // window (renderPass stops re-fitting once the axes deviate from the last
+    // auto-fit); Resume Live / Show All off / X-axis switch release the pin.
     m_panner = new QwtPlotPanner(m_plot->canvas());
     m_panner->setMouseButton(Qt::MiddleButton);
-    m_panner->setEnabled(false);
+    m_panner->setEnabled(true);
     m_magnifier = new QwtPlotMagnifier(m_plot->canvas());
     m_magnifier->setMouseButton(Qt::NoButton);  // wheel only
-    m_magnifier->setEnabled(false);
+    m_magnifier->setEnabled(true);
 
     // Re-render when a display unit changes anywhere in the app (°C→°F, ...)
     connect(&UnitConverter::instance(), &UnitConverter::unitsChanged,
@@ -344,12 +358,43 @@ void RealtimePlot::updateValue(DataPointID id, double value, const QDateTime& ti
 #ifdef ENABLE_QWT_PLOTTING   // engine-only render/review internals below
 
 // ── Qwt render pass (batched, decimated) ──
-
+//
+// Auto-follow mode: every pass re-fits the axes to the session (scrolling time
+// window, full session while Show All/paused, data range in XY mode) and stores
+// the applied X interval in m_fitLo/m_fitHi. If the X axis ever deviates from
+// that stored interval, only the user's wheel-zoom/middle-drag can have moved
+// it → pin the view to the current interval and stop re-fitting until an
+// explicit view command (Resume Live, Show All toggle, window or X-axis change)
+// clears the pin. While pinned, samples keep rendering inside the pinned
+// window, so a live stream keeps drawing inside the zoomed subsection.
 void RealtimePlot::renderPass(bool forceRender) {
     Q_UNUSED(forceRender);
     const bool timeMode = !m_model.isXyMode();
     const double now = m_clock.elapsed() / 1000.0;
-    const double x0 = (m_showAll || m_paused) ? 0.0 : now - m_timeWindow;
+
+    if (!m_viewPinned) {
+        const QwtInterval ax = m_plot->axisInterval(QwtPlot::xBottom);
+        const double tol = 1e-9 * qMax(1.0, qAbs(m_fitHi - m_fitLo));
+        if (qAbs(ax.minValue() - m_fitLo) > tol ||
+            qAbs(ax.maxValue() - m_fitHi) > tol) {
+            m_viewPinned = true;         // user zoomed/panned — hold this window
+            emit viewChanged();
+        }
+    }
+
+    // Sample window: while pinned (or in XY mode) the model decides per point;
+    // time mode auto-follow uses the scrolling/show-all window.
+    double x0 = 0.0, x1 = now;
+    if (timeMode) {
+        if (m_viewPinned) {
+            const QwtInterval ax = m_plot->axisInterval(QwtPlot::xBottom);
+            x0 = ax.minValue();
+            x1 = ax.maxValue();
+        } else {
+            x1 = qMax(now, 1.0);
+            x0 = (m_showAll || m_paused) ? 0.0 : now - m_timeWindow;
+        }
+    }
     const int buckets = qMax(64, int(m_plot->canvas()->width()));
 
     auto& conv = UnitConverter::instance();
@@ -371,7 +416,7 @@ void RealtimePlot::renderPass(bool forceRender) {
         const double ay = conv.toDisplay(uy, 1.0) - by;
 
         const QVector<QPointF> raw =
-            m_model.renderPoints(id, x0, now, timeMode ? buckets : 0);
+            m_model.renderPoints(id, x0, x1, timeMode ? buckets : 0);
         QVector<QPointF> disp;
         disp.reserve(raw.size());
         for (const QPointF& p : raw) {
@@ -389,22 +434,27 @@ void RealtimePlot::renderPass(bool forceRender) {
         curve->setSamples(disp);
     }
 
-    if (timeMode) {
-        // Scrolling window, pinned at 0 until the first window has elapsed.
-        if (m_showAll || m_paused || now < m_timeWindow)
-            m_plot->setAxisScale(QwtPlot::xBottom, 0, qMax(now, 1.0));
-        else
-            m_plot->setAxisScale(QwtPlot::xBottom, x0, now);
-    } else if (xMax > xMin) {
-        const double pad = (xMax - xMin) * 0.05;
-        m_plot->setAxisScale(QwtPlot::xBottom, xMin - pad, xMax + pad);
-    }
+    if (!m_viewPinned) {
+        if (timeMode) {
+            // Scrolling window, pinned at 0 until the first window has elapsed.
+            const double lo = (m_showAll || m_paused) ? 0.0 : now - m_timeWindow;
+            const double hi = qMax(now, 1.0);
+            m_plot->setAxisScale(QwtPlot::xBottom, lo, hi);
+            m_fitLo = lo;
+            m_fitHi = hi;
+        } else if (xMax > xMin) {
+            const double pad = (xMax - xMin) * 0.05;
+            m_plot->setAxisScale(QwtPlot::xBottom, xMin - pad, xMax + pad);
+            m_fitLo = xMin - pad;
+            m_fitHi = xMax + pad;
+        }
 
-    if (hasData && yMax >= yMin) {
-        double range = yMax - yMin;
-        if (range < 0.1) range = 1.0;
-        const double padding = range * 0.1;
-        m_plot->setAxisScale(QwtPlot::yLeft, yMin - padding, yMax + padding);
+        if (hasData && yMax >= yMin) {
+            double range = yMax - yMin;
+            if (range < 0.1) range = 1.0;
+            const double padding = range * 0.1;
+            m_plot->setAxisScale(QwtPlot::yLeft, yMin - padding, yMax + padding);
+        }
     }
     m_plot->replot();
 }

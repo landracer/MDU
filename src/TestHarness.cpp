@@ -4,6 +4,7 @@
 #include "MdFrameDecoder.h"
 #include "PlotDataModel.h"
 #include "DashboardWidget.h"
+#include "RAtTraxBMS.h"
 #include "SessionLog.h"
 #include <QRandomGenerator>
 #include <QDebug>
@@ -67,6 +68,9 @@ bool TestHarness::runAllTests() {
 
     // Dashboard routing tests
     testDashboardRouting();
+
+    // rAtTrax-BMS wire-format tests (BMS CSV + VESC kv/contract lines)
+    testRAtTraxBMSLines();
 
     // Session log tests
     testSessionRoundTrip();
@@ -643,6 +647,60 @@ void TestHarness::testDashboardRouting()
     if (bms) bms->clear();
     report("testDashboard_clearKeepsSeries", bms && bms->hasSeries(DataPointID::BMSSOC),
            "clear() empties samples without dropping the series");
+}
+
+void TestHarness::testRAtTraxBMSLines()
+{
+    // RAtTraxBMS instance without a port — we call parseCSVLine() directly.
+    RAtTraxBMS bms(QStringLiteral("TEST"));
+    QHash<DataPointID, double> got;
+    QObject::connect(&bms, &RAtTraxBMS::frameParsed,
+                     [&got](const QHash<DataPointID, double>& v) { got = v; });
+
+    // ── BMS CSV line (live firmware format) ──
+    // BMS:<packV>,<packA>,<temp°C>,<stackV>,<SOC%>,<minV>,<maxV>,<delta mV>,<cells...>
+    got.clear();
+    bms.parseCSVLine(QStringLiteral(
+        "BMS:23.62,1.23,28.7,23.6,78,3.944,3.962,18.0,3.944,3.958,3.962,3.960,3.944,3.956"));
+    report("testRAtTrax_bmsPackV", qFuzzyCompare(got.value(DataPointID::BMSPackVoltage), 23.62),
+           QString("pack V: %1").arg(got.value(DataPointID::BMSPackVoltage)));
+    report("testRAtTrax_bmsPackA", qFuzzyCompare(got.value(DataPointID::BMSPackCurrent), 1.23),
+           QString("pack A: %1").arg(got.value(DataPointID::BMSPackCurrent)));
+    report("testRAtTrax_bmsSoc", qFuzzyCompare(got.value(DataPointID::BMSSOC), 78.0),
+           QString("SOC: %1").arg(got.value(DataPointID::BMSSOC)));
+    report("testRAtTrax_bmsCell1", qFuzzyCompare(got.value(DataPointID::BMSCell1), 3.944),
+           QString("cell1: %1").arg(got.value(DataPointID::BMSCell1)));
+
+    // ── VESC kv line (live proof-of-live-decode format) ──
+    // VESC: rpm=<rpm> motorA=<A> inV=<V> mosT=<°C> motT=<°C> rx=<can-count>
+    got.clear();
+    bms.parseCSVLine(QStringLiteral(
+        "VESC: rpm=-45000 motorA=-1.23 inV=23.00 mosT=22.6 motT=-96.3 rx=559676"));
+    report("testRAtTrax_vescKvRpm", got.value(DataPointID::VESCERPM) == -45000.0,
+           QString("rpm: %1").arg(got.value(DataPointID::VESCERPM)));
+    report("testRAtTrax_vescKvCurrent", qFuzzyCompare(got.value(DataPointID::VESCMotorCurrent), -1.23),
+           QString("motorA: %1").arg(got.value(DataPointID::VESCMotorCurrent)));
+    report("testRAtTrax_vescKvVoltage", qFuzzyCompare(got.value(DataPointID::VESCInputVoltage), 23.0),
+           QString("inV: %1").arg(got.value(DataPointID::VESCInputVoltage)));
+    report("testRAtTrax_vescKvMosT", qFuzzyCompare(got.value(DataPointID::VESCMOSFETTemp), 22.6),
+           QString("mosT: %1").arg(got.value(DataPointID::VESCMOSFETTemp)));
+    report("testRAtTrax_vescKvMotT", qFuzzyCompare(got.value(DataPointID::VESCMotorTemp), -96.3),
+           QString("motT: %1").arg(got.value(DataPointID::VESCMotorTemp)));
+
+    // ── VESC contract line (comma format, values start at field 1) ──
+    got.clear();
+    bms.parseCSVLine(QStringLiteral("VESC:,-45000,-1.23,75.2,44.10,0"));
+    report("testRAtTrax_vescCsvPair",
+           got.value(DataPointID::VESCERPM) == -45000.0
+               && qFuzzyCompare(got.value(DataPointID::VESCMotorCurrent), -1.23)
+               && qFuzzyCompare(got.value(DataPointID::VESCDutyCycle), 0.752)
+               && qFuzzyCompare(got.value(DataPointID::VESCInputVoltage), 44.10),
+           "contract CSV line maps rpm/motorA/duty/inputV with duty %→ratio");
+
+    // Unknown lines are ignored without emitting anything.
+    got.clear();
+    bms.parseCSVLine(QStringLiteral("garbage that must be ignored"));
+    report("testRAtTrax_unknownIgnored", got.isEmpty(), "unknown line emits nothing");
 }
 
 void TestHarness::testSessionRoundTrip()

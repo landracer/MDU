@@ -50,7 +50,11 @@ public slots:
 
     /**
      * @brief Parse a CSV line from BMS logger
-     * Format: "Timestamp,GPS_Lat,GPS_Lng,GPS_Alt,GPS_Speed_kmh,GPS_Sats,BMS_SOC,BMS_Voltage,BMS_Current,BMS_Temp,IMU_Pitch,IMU_Roll,IMU_Yaw,Speed_Avg_mph,RPM_FL,RPM_FR,RPM_RL,RPM_RR,VESC_Voltage,VESC_Motor_Temp,VESC_Current,VESC_Duty,VESC_RPM,VESC_Fault"
+     * Live firmware formats (rAtTrax_BMS_Logger):
+     *   BMS:<packV>,<packA>,<temp°C>,<stackV>,<SOC%>,<minV>,<maxV>,<delta mV>,<c1V>,…
+     *   VESC: rpm=<rpm> motorA=<A> inV=<V> mosT=<°C> motT=<°C> rx=<can-count>   (kv summary)
+     *   VESC:,<rpm>,<motorA>,<dutyPct>,<inputV>,<fault>                          (contract CSV)
+     *   GPS:,<lat>,<lng>,<alt_m>,<speed_mph>,<sats>
      */
     void parseCSVLine(const QString& line);
 

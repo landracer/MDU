@@ -169,31 +169,57 @@ void RAtTraxBMS::parseCSVLine(const QString& line) {
         }
         
     } else if (line.startsWith("VESC:")) {
-        // VESC:RPM,MotorCurrent,Duty%,InputVoltage,FaultCode
-        if (fields.size() < 6) {
-            qWarning() << "[rAtTrax-BMS] Invalid VESC line:" << line;
-            return;
+        const QString body = line.mid(5).trimmed();
+        if (body.contains(QLatin1Char('='))) {
+            // Live firmware summary format (rAtTrax_BMS_Logger main.cpp):
+            // VESC: rpm=0 motorA=0.00 inV=23.00 mosT=22.6 motT=-96.3 rx=559676
+            const QStringList pairs = body.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+            for (const QString& pair : pairs) {
+                const QStringList kv = pair.split(QLatin1Char('='), Qt::SkipEmptyParts);
+                if (kv.size() != 2) continue;
+                bool okV = false;
+                const double v = kv[1].toDouble(&okV);
+                if (!okV) continue;
+                const QString& key = kv[0];
+                if      (key == "motorA") values[DataPointID::VESCMotorCurrent] = v;
+                else if (key == "inV")    values[DataPointID::VESCInputVoltage] = v;
+                else if (key == "mosT")   values[DataPointID::VESCMOSFETTemp] = v;
+                else if (key == "motT")   values[DataPointID::VESCMotorTemp] = v;
+                else if (key == "rpm")    values[DataPointID::VESCERPM] = v;  // motor RPM
+                // rx=<CAN frame counter> is diagnostic — not plotted
+            }
+            BMS_DEBUG << "Parsed VESC (kv):" << values.size() << "data points";
+        } else {
+            // Contract format: VESC:,<rpm>,<motorA>,<dutyPct>,<inputV>,<fault>
+            // (values start at field 1 — field 0 is the bare "VESC:" prefix)
+            if (fields.size() < 6) {
+                qWarning() << "[rAtTrax-BMS] Invalid VESC line:" << line;
+                return;
+            }
+            
+            bool ok1 = false, ok2 = false, ok3 = false, ok4 = false, ok5 = false;
+            double rpm = fields[1].toDouble(&ok1);
+            double motorCurrent = fields[2].toDouble(&ok2);
+            double dutyPct = fields[3].toDouble(&ok3);
+            double inputVoltage = fields[4].toDouble(&ok4);
+            double faultCode = fields[5].toDouble(&ok5);
+            
+            if (!ok1 || !ok2 || !ok3 || !ok4 || !ok5) {
+                qWarning() << "[rAtTrax-BMS] Failed to parse VESC values from:" << line;
+                return;
+            }
+            
+            values[DataPointID::VESCERPM] = rpm;
+            values[DataPointID::VESCMotorCurrent] = motorCurrent;
+            values[DataPointID::VESCDutyCycle] = dutyPct / 100.0;  // Convert % to ratio
+            values[DataPointID::VESCInputVoltage] = inputVoltage;
+            values[DataPointID::VESCFaultCode] = faultCode;
+            
+            BMS_DEBUG << "Parsed VESC: RPM=" << rpm << ", I=" << motorCurrent << "A, Duty=" << dutyPct << "%";
+            
+            if (faultCode != 0.0)
+                emit faultDetected(static_cast<uint32_t>(faultCode));
         }
-        
-        bool ok1 = false, ok2 = false, ok3 = false, ok4 = false, ok5 = false;
-        double rpm = fields[1].toDouble(&ok1);
-        double motorCurrent = fields[2].toDouble(&ok2);
-        double dutyPct = fields[3].toDouble(&ok3);
-        double inputVoltage = fields[4].toDouble(&ok4);
-        double faultCode = fields[5].toDouble(&ok5);
-        
-        if (!ok1 || !ok2 || !ok3 || !ok4 || !ok5) {
-            qWarning() << "[rAtTrax-BMS] Failed to parse VESC values from:" << line;
-            return;
-        }
-        
-        values[DataPointID::VESCERPM] = rpm;
-        values[DataPointID::VESCMotorCurrent] = motorCurrent;
-        values[DataPointID::VESCDutyCycle] = dutyPct / 100.0;  // Convert % to ratio
-        values[DataPointID::VESCInputVoltage] = inputVoltage;
-        values[DataPointID::VESCFaultCode] = faultCode;
-        
-        BMS_DEBUG << "Parsed VESC: RPM=" << rpm << ", I=" << motorCurrent << "A, Duty=" << dutyPct << "%";
         
     } else if (line.startsWith("GPS:")) {
         // GPS:Lat,Lng,Altitude,Speed_mph,Satellites

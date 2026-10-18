@@ -79,7 +79,7 @@ functional yet and is tracked as a roadmap item.
 ./multidisplay-unified --session session.mdsn     # replay a recorded binary session
 ./multidisplay-unified --md-ecu /dev/ttyUSB0 --bms /dev/ttyUSB1 --bridge /dev/ttyUSB2 --csv x.CSV  # all at once
 ./multidisplay-unified --test                     # simulated data @30Hz (no hardware needed)
-./multidisplay-unified --unit-test                # run the 55-assertion test suite and exit
+./multidisplay-unified --unit-test                # run the 66-assertion test suite and exit
 ```
 
 | Option | Description |
@@ -114,14 +114,18 @@ multidisplay-unified/
 
 ## Development Status
 
-**Current: v0.2.0** — see [`CHANGELOG.md`](CHANGELOG.md). Foundation + boost/N75 configuration,
-live table, unit toggling, pause/review and markers are in. Remaining gaps and the professional-
-grade roadmap live in [`A-class.md`](A-class.md).
+**Current: v0.6.0** — see [`CHANGELOG.md`](CHANGELOG.md). Foundation + boost/N75 configuration,
+live table, unit toggling, always-on wheel-zoom (zoom-while-live pins the view),
+pause/review and markers are in. Remaining gaps and the professional-grade roadmap
+live in [`A-class.md`](A-class.md).
 
 - ✅ Thread-safe `UnifiedDataStore` (~30Hz, `QReadWriteLock`)
-- ✅ 4 hardware parsers (MD-ECU framing now matches the ancestor firmware contract)
-- ✅ Qwt real-time plots, clickable legends, markers, review mode
-- ✅ 22 unit-test groups / 55 assertions, all passing (`--unit-test`, wired into CTest; CI on Linux **and** Windows/macOS — artifacts uploaded per run)
+- ✅ 4 hardware parsers (MD-ECU framing now matches the ancestor firmware contract;
+  rAtTrax-BMS parses the live BMS CSV + VESC key=value wire formats)
+- ✅ Qwt real-time plots with **always-available wheel-zoom** (zooming while live
+  pins the view to the zoomed subsection until Resume Live), clickable legends,
+  markers, review mode
+- ✅ 23 unit-test groups / 66 assertions, all passing (`--unit-test`, wired into CTest; CI on Linux **and** Windows/macOS — artifacts uploaded per run)
 - ✅ Engine-agnostic plotting: `PlotEngine` interface + pure `PlotDataModel` (ring buffers,
   min/max decimation, XY-mode pairing); X-axis selector plots any DP against any DP
 - ✅ MD-ECU Digifant/VDO/knock payload fully mapped (raw counts where uncalibrated)

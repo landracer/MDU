@@ -190,7 +190,7 @@ enum class DataPointID : uint32_t {
     
     // ─── VESC / DRIVETRAIN (0x0600–0x06FF) ────────────────────────
     // Aligned to opendash catalog / rAtTrax VESC broadcast
-    VESCERPM = 0x0600,               // eRPM (motor)
+    VESCERPM = 0x0600,               // motor RPM (mechanical; firmware contract 0x0600)
     VESCMotorCurrent = 0x0601,       // A (signed)
     VESCDutyCycle = 0x0602,          // duty (0–1 rAtTrax / % opendash)
     VESCAhUsed = 0x0603,             // Ah

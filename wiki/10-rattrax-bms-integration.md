@@ -43,23 +43,42 @@ BMS:0.12,0.00,28.7,23.6,78,3.944,3.962,18.0,3.956,3.958,3.962,3.960,3.944,3.956
 **Cell Count:** Auto-adjusts to `CONNECTED_CELLS` in config.h (2, 3, 6, 8, 12, or 16)
 
 ### VESC Data Packet
+
+Live firmware (rAtTrax_BMS_Logger) streams a decoded summary at 1 Hz in
+**space-separated key=value form** — the app parses this format directly:
+
 ```
-VESC:RPM,MotorCurrent,Duty%,InputVoltage,FaultCode
+VESC: rpm=<rpm> motorA=<A> inV=<V> mosT=<°C> motT=<°C> rx=<can-frame-count>
+```
+
+**Example (live bench capture):**
+```
+VESC: rpm=0 motorA=0.00 inV=23.00 mosT=22.6 motT=-96.3 rx=559676
+```
+
+`rpm` = motor mechanical RPM → DP 0x0600, `motorA` → 0x0601, `mosT` → 0x0607,
+`motT` → 0x0608, `inV` → 0x060C; `rx` (CAN diagnostics counter) is not plotted.
+
+The comma-separated **contract format** is also still accepted (values start at
+field 1; duty is sent as a percent and the app converts to a ratio):
+
+```
+VESC:,<rpm>,<motorA>,<dutyPct>,<inputV>,<fault>
 ```
 
 **Example:**
 ```
-VESC:3200,45.5,75.2,52.3,0
+VESC:,-45000,-1.23,75.2,52.3,0
 ```
 
 ### GPS Data Packet
 ```
-GPS:Lat,Lng,Altitude,Speed_mph,Satellites
+GPS:,<lat>,<lng>,<alt_m>,<speed_mph>,<sats>
 ```
 
 **Example:**
 ```
-GPS:39.7392,-104.9887,1625.3,45.2,14
+GPS:,39.7392,-104.9887,1625.3,45.2,14
 ```
 
 ### Alternative: ESPNOW Bridge (Limited Data)
@@ -155,5 +174,5 @@ void MainWindow::connectBMS(const QString& portName) {
 
 ---
 
-**Last Updated:** 2026-06-17  
-**Integration Version:** v3.1 (BMS Logger) ↔ v0.2.0 (multidisplay-unified)
+**Last Updated:** 2026-10-18  
+**Integration Version:** v3.1 (BMS Logger) ↔ v0.6.0 (multidisplay-unified)
